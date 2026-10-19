@@ -216,7 +216,6 @@
             return;
         }
 
-        // Sort players numerically by Jersey Number
         activePlayers.sort((a, b) => {
             let numA = parseInt(a.number) || 999;
             let numB = parseInt(b.number) || 999;
@@ -312,7 +311,6 @@
         localStorage.setItem('hockeyLastMatchSettings', JSON.stringify(matchSettings));
         localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSettings));
 
-        // Redirection to Page 2
         window.location.href = 'lines.html';
     }
 
