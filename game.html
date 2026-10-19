@@ -22,7 +22,9 @@
             margin-bottom: 20px;
         }
         h1, h2, h3 { color: #38bdf8; margin-top: 0; }
-        .scoreboard {
+        
+        /* Scoreboard & Switch Board shared width constraint */
+        .scoreboard, .switch-board {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -30,9 +32,15 @@
             padding: 15px;
             border-radius: 6px;
             border: 1px solid #334155;
-            font-size: 1.2rem;
-            font-weight: bold;
+            box-sizing: border-box;
+            width: 100%;
         }
+        .switch-board {
+            margin-top: 15px;
+            padding: 12px 20px;
+            gap: 10px;
+        }
+        
         .team-box { text-align: center; }
         .score-num { color: #10b981; font-size: 1.8rem; display: block; }
         .away-score-num { color: #ef4444; font-size: 1.8rem; display: block; }
@@ -45,18 +53,26 @@
             font-size: 0.8rem;
             font-weight: bold;
         }
-        .btn-away-goal {
-            background-color: #dc2626;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            font-size: 0.85rem;
-            border-radius: 4px;
+        
+        /* Switch Board Action Buttons */
+        .btn-switch {
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            margin-top: 6px;
+            border: none;
+            color: white;
+            flex: 1;
+            transition: background-color 0.2s;
         }
-        .btn-away-goal:hover { background-color: #b91c1c; }
+        .btn-switch-goal { background-color: #dc2626; }
+        .btn-switch-goal:hover { background-color: #b91c1c; }
+        .btn-switch-penalty { background-color: #059669; }
+        .btn-switch-penalty:hover { background-color: #047857; }
+        .btn-switch-rewind { background-color: #0284c7; }
+        .btn-switch-rewind:hover { background-color: #0369a1; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
         th { background-color: #0f172a; color: #94a3b8; }
@@ -97,7 +113,7 @@
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 15px;
-            display: none; /* Hidden by default when empty */
+            display: none;
         }
         .penalty-box-item-red {
             display: flex;
@@ -193,7 +209,7 @@
 <div class="container">
     <h1>Live Game Tracker</h1>
 
-    <!-- Scoreboard Header -->
+    <!-- Scoreboard & Switch Board Header -->
     <div class="card">
         <div class="scoreboard">
             <div class="team-box">
@@ -214,8 +230,15 @@
                 <span id="displayAway">Away</span> 
                 <span class="away-score-num" id="awayScore">0</span>
                 <div class="shot-subtext">Shots: <span id="awayShotsTotal">0</span></div>
-                <button class="btn-away-goal" onclick="recordOpponentPenalty()">Opponent Penalty [Green Box]</button>
             </div>
+        </div>
+
+        <!-- Switch Board Control Panel -->
+        <div class="switch-board">
+            <button class="btn-switch btn-switch-goal" onclick="recordAwayGoal()">Opponent Goal</button>
+            <button class="btn-switch btn-switch-penalty" onclick="recordOpponentPenalty()">Opponent Penalty</button>
+            <button class="btn-switch btn-switch-rewind" onclick="rewindClock(5)">Rewind Time -5s</button>
+            <button class="btn-switch btn-switch-rewind" onclick="rewindClock(10)">Rewind Time -10s</button>
         </div>
     </div>
 
@@ -375,6 +398,16 @@
 
             startPenaltyTimerIntervalIfNeeded();
         }
+    }
+
+    function rewindClock(seconds) {
+        clockSeconds += seconds;
+        let maxPeriodSeconds = (currentPeriod === 'OT') ? (5 * 60) : (17 * 60);
+        if (clockSeconds > maxPeriodSeconds) {
+            clockSeconds = maxPeriodSeconds;
+        }
+        updateClockDisplay();
+        logEvent(`Clock rewound by +${seconds} seconds.`);
     }
 
     function startPenaltyTimerIntervalIfNeeded() {
