@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -194,7 +193,7 @@
 
                 <h3>Live Event Feed</h3>
                 <div class="event-log" id="eventLog">
-                    <div class="event-item">[17:00] Tracker initialized. Press [Q] for Opponent Shot.</div>
+                    <div class="event-item">[17:00] Tracker initialized. Press [F11] for 4v4.</div>
                 </div>
             </div>
         </div>
@@ -264,7 +263,7 @@
     let activeDefenseIds = [];
     let activeSpecialIds = [];
     let isSpecialTeamsMode = false;
-    let currentSituation = 'EV';
+    let currentSituation = 'EV'; // EV, 4v4, PP, PK
     let scoreHome = 0;
     let scoreAway = 0;
     let homeShots = 0;
@@ -324,8 +323,7 @@
                 }
             }, 1000);
 
-            // Run penalty countdown if active
-            if (currentSituation !== 'EV' && penaltySecondsRemaining > 0) {
+            if ((currentSituation === 'PP' || currentSituation === 'PK') && penaltySecondsRemaining > 0) {
                 startPenaltyTimerInterval();
             }
         }
@@ -427,6 +425,9 @@
             badge.style.background = '#10b981';
         } else if (currentSituation === 'PK') {
             badge.style.background = '#ef4444';
+        } else if (currentSituation === '4v4') {
+            badge.style.background = '#38bdf8';
+            document.getElementById('penaltyTimerDisplay').style.display = 'none';
         } else {
             badge.style.background = '#f59e0b';
             document.getElementById('penaltyTimerDisplay').style.display = 'none';
@@ -458,6 +459,7 @@
         html += `
             <hr style="border-color: #334155; margin: 8px 0;">
             <p><span>Space Bar:</span> Start / Stop Clock</p>
+            <p><span>F11:</span> Set 4v4 Formation</p>
             <p><span>Q:</span> Shot on Own Goal (Opponent Shot)</p>
             <p><span>Shift + [Key]:</span> Sub Single Player On Ice</p>
             <p><span>G/A/S/P + [Key]:</span> Record Stat (On-Ice Only)</p>
@@ -525,6 +527,18 @@
         }
 
         let key = e.key.toUpperCase();
+
+        // Hotkey F11 for 4v4 Formation
+        if (e.code === 'F11') {
+            e.preventDefault();
+            currentSituation = '4v4';
+            isSpecialTeamsMode = false;
+            updateSituationBadge();
+            logEvent(`Situation set to 4v4 formation.`);
+            updateGraphicalRink();
+            renderRosterTable();
+            return;
+        }
 
         // Hotkey Q for Shot on Own Goalie (Opponent Shot)
         if (key === 'Q' && !e.shiftKey && !pendingModifier) {
@@ -747,6 +761,19 @@
             });
 
             logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
+
+            // Special Teams Scoring Rules check for Home Goal
+            if (currentSituation === 'PP') {
+                // PP Goal scored by us -> PP ends, both teams full strength (EV)
+                if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+                currentSituation = 'EV';
+                updateSituationBadge();
+                logEvent(`Power Play goal scored! PP ended -> Both teams full strength (EV).`);
+            } else if (currentSituation === 'PK') {
+                // Short-handed goal scored by us -> PK continues[cite: 3]
+                logEvent(`Short-handed goal scored! Penalty Kill continues[cite: 3].`);
+            }
+
         } else if (mod === 'A') {
             st.assists++;
             logEvent(`Assist credited`, ` (${cleanNum})`);
@@ -774,6 +801,19 @@
         });
 
         logEvent(`OPPONENT GOAL! Conceded. [Plus/Minus -1 awarded to on-ice players]`);
+
+        // Special Teams Scoring Rules check for Opponent Goal
+        if (currentSituation === 'PP') {
+            // Opponent scores during our PP -> PP continues[cite: 3]
+            logEvent(`Opponent scored during our Power Play -> PP continues[cite: 3].`);
+        } else if (currentSituation === 'PK') {
+            // Opponent scores during our PK -> PK ends, teams return to EV[cite: 3]
+            if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+            currentSituation = 'EV';
+            updateSituationBadge();
+            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV[cite: 3].`);
+        }
+
         renderRosterTable();
     }
 
