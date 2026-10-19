@@ -279,7 +279,7 @@
                 <div>
                     <table>
                         <thead>
-                            <tr><th>Key</th><th>#</th><th>Player</th><th>G/A/S/P</th><th>TOI</th><th>+/-</th></tr>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>Stats (Skater / GK)</th><th>TOI</th><th>+/-</th></tr>
                         </thead>
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
@@ -325,17 +325,20 @@
 
     let statsTracker = {};
     roster.forEach(p => {
-        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+        let isGK = isGoalie(p);
+        if (isGK) {
+            statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0, sg: 0, ga: 0 };
+        } else {
+            statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+        }
     });
 
-    // Opponent penalty tracking
     let opponentPenaltySeconds = 0;
-
     let activeForwardIds = [];
     let activeDefenseIds = [];
     let activeSpecialIds = [];
     let isSpecialTeamsMode = false;
-    let currentSituation = 'EV'; // EV, 4v4, PP, PK
+    let currentSituation = 'EV'; 
     let scoreHome = 0;
     let scoreAway = 0;
     let homeShots = 0;
@@ -346,7 +349,6 @@
     let isClockRunning = false;
     let currentPeriod = 1;
     let manualGoalieOut = false;
-
     let penaltyTimerInterval = null;
 
     document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
@@ -360,11 +362,13 @@
         updateClockDisplay();
     }
 
+    function isGoalie(player) {
+        let pos = String(player.position || '').toUpperCase().trim();
+        return pos === 'G' || pos === 'GK' || pos.includes('GOALIE') || pos.startsWith('G');
+    }
+
     function getGoaliePlayer() {
-        return roster.find(p => {
-            let pos = String(p.position || '').toUpperCase().trim();
-            return pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
-        });
+        return roster.find(p => isGoalie(p));
     }
 
     function toggleClock() {
@@ -422,7 +426,6 @@
     function tickActivePenalties() {
         let activePenaltiesExist = false;
 
-        // Tick own players
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
@@ -435,7 +438,6 @@
             }
         });
 
-        // Tick opponent penalty
         if (opponentPenaltySeconds > 0) {
             opponentPenaltySeconds--;
             activePenaltiesExist = true;
@@ -559,7 +561,6 @@
         let boxItems = [];
         let lowestSecs = 999999;
 
-        // Check own players in box
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
@@ -579,7 +580,6 @@
             }
         });
 
-        // Check opponent in box (Green box)
         if (opponentPenaltySeconds > 0) {
             if (opponentPenaltySeconds < lowestSecs) {
                 lowestSecs = opponentPenaltySeconds;
@@ -666,11 +666,27 @@
             let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
-            let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
-            let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
             let toiFormatted = formatTOI(st.toiSeconds);
             let surnameOnly = p.surname || '';
-            
+            let isGK = isGoalie(p);
+
+            let statsDisplay = "";
+            let pmDisplay = "";
+
+            if (isGK) {
+                let sg = st.sg || 0;
+                let ga = st.ga || 0;
+                let saves = Math.max(0, sg - ga);
+                let savePctDecimal = sg > 0 ? Number((saves / sg).toFixed(3)) : 0;
+                statsDisplay = `SG:${sg} / GA:${ga} / Sv:${saves} (${(savePctDecimal * 100).toFixed(1)}%)`;
+                pmDisplay = `-`;
+            } else {
+                let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
+                let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
+                pmDisplay = `<span style="${pmColor} font-weight: bold;">${pmFormatted}</span>`;
+                statsDisplay = `${st.goals}/${st.assists}/${st.shots}/${st.pim}`;
+            }
+
             let penaltyDisplay = "";
             if (st.penaltySeconds > 0) {
                 let pMins = Math.floor(st.penaltySeconds / 60);
@@ -682,9 +698,9 @@
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
                 <td>${cleanNum}</td>
                 <td>${surnameOnly}${penaltyDisplay}</td>
-                <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
+                <td>${statsDisplay}</td>
                 <td>${toiFormatted}</td>
-                <td style="${pmColor} font-weight: bold;">${pmFormatted}</td>
+                <td>${pmDisplay}</td>
             </tr>`;
         });
     }
@@ -776,7 +792,15 @@
             e.preventDefault();
             awayShots++;
             document.getElementById('awayShotsTotal').innerText = awayShots;
+            
+            let goalie = getGoaliePlayer();
+            if (goalie && !manualGoalieOut) {
+                let gst = statsTracker[goalie.id];
+                if (gst) gst.sg++;
+            }
+
             logEvent(`Shot on Own Goal (Opponent Shot recorded)`);
+            renderRosterTable();
             return;
         }
 
@@ -923,8 +947,8 @@
             let p = roster.find(item => String(item.id) === String(id));
             if (p) {
                 let pos = String(p.position || '').toUpperCase().trim();
-                let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
-                if (isGoalie) return;
+                let isGoaliePlayer = isGoalie(p);
+                if (isGoaliePlayer) return;
 
                 let cleanNum = String(p.number || '').replace('#', '').trim();
                 let hotkeyTag = p.hotkey ? `<span class="rink-hotkey-tag">${p.hotkey}</span>` : '';
@@ -959,10 +983,9 @@
             return;
         }
 
-        let pos = String(player.position || '').toUpperCase().trim();
-        let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
+        let isGoaliePlayer = isGoalie(player);
 
-        if (isGoalie) {
+        if (isGoaliePlayer) {
             manualGoalieOut = !manualGoalieOut;
             let rosterList = getCurrentOnIceNumbersList();
             logEvent(`Goalie manually ${manualGoalieOut ? 'OUT' : 'IN'} (${cleanNum})`, rosterList);
@@ -973,6 +996,7 @@
 
         let currentOnIce = getAllOnIceIds();
         let index = currentOnIce.indexOf(idStr);
+        let pos = String(player.position || '').toUpperCase().trim();
 
         if (isSpecialTeamsMode) {
             if (index > -1) { activeSpecialIds.splice(activeSpecialIds.indexOf(idStr), 1); }
@@ -999,8 +1023,9 @@
         let cleanNum = String(player.number || '').replace('#', '').trim();
         let currentOnIce = getAllOnIceIds();
         let isOnIce = currentOnIce.includes(String(player.id));
+        let isGK = isGoalie(player);
 
-        if (mod !== 'P' && !isOnIce) {
+        if (mod !== 'P' && !isOnIce && !isGK) {
             logEvent(`⚠️ BLOCKED: #${cleanNum} ${player.surname} is NOT on ice! Cannot record [${mod}].`);
             alert(`Player #${cleanNum} (${player.surname}) is NOT currently on ice and cannot record a ${mod}!`);
             return;
@@ -1008,11 +1033,16 @@
 
         let st = statsTracker[player.id];
         if (!st) {
-            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+            st = isGK ? { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0, sg: 0, ga: 0 } 
+                      : { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             statsTracker[player.id] = st;
         }
 
         if (mod === 'G') {
+            if (isGK) {
+                alert(`Goalies cannot score goals with 'G' shortcut. Use 'G' for Skaters.`);
+                return;
+            }
             st.goals++;
             scoreHome++;
             document.getElementById('homeScore').innerText = scoreHome;
@@ -1023,28 +1053,40 @@
                 }
             });
 
-            logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
+            logEvent(`GOAL! Scored by ${player.surname} (#${cleanNum})`, ` [Plus/Minus +1 awarded to on-ice players]`);
 
             if (currentSituation === 'PP') {
-                opponentPenaltySeconds = 0; // Clear opponent penalty on goal
+                opponentPenaltySeconds = 0;
                 currentSituation = 'EV';
                 updateSituationBadge();
                 logEvent(`Power Play goal scored! Opponent released from penalty box. PP ended -> EV.`);
             } else if (currentSituation === 'PK') {
-                logEvent(`Short-handed goal scored! Penalty Kill continues.`);
+                logEvent(`Short-handed goal scored by ${player.surname}! Penalty Kill continues.`);
             }
 
         } else if (mod === 'A') {
+            if (isGK) {
+                alert(`Goalies do not record assists with 'A'.`);
+                return;
+            }
             st.assists++;
-            logEvent(`Assist credited`, ` (${cleanNum})`);
+            logEvent(`Assist credited to ${player.surname} (#${cleanNum})`);
         } else if (mod === 'S') {
+            if (isGK) {
+                alert(`Goalies do not record shots on goal with 'S'. Use 'Q' for opponent shots against.`);
+                return;
+            }
             st.shots++;
             homeShots++;
             document.getElementById('homeShotsTotal').innerText = homeShots;
-            logEvent(`Shot on Goal`, ` (${cleanNum})`);
+            logEvent(`Shot on Goal by ${player.surname} (#${cleanNum})`);
         } else if (mod === 'P') {
+            if (isGK) {
+                alert(`Goalies cannot take penalties with 'P' in this tracker.`);
+                return;
+            }
             st.pim += 2;
-            st.penaltySeconds = 2 * 60; // 2 minutes in penalty box
+            st.penaltySeconds = 2 * 60; 
             
             if (isOnIce) {
                 activeForwardIds = activeForwardIds.filter(id => id !== String(player.id));
@@ -1071,7 +1113,7 @@
             }
 
             let rosterList = getCurrentOnIceNumbersList();
-            logEvent(`PENALTY (2 min) assigned to #${cleanNum} ${player.surname}. Sent to box. Auto-switched to PK (PK1 deployed).`, rosterList);
+            logEvent(`PENALTY (2 min) assigned to ${player.surname} (#${cleanNum}). Sent to box. Auto-switched to PK (PK1 deployed).`, rosterList);
         }
         renderRosterTable();
         updatePenaltyBoxBoard();
@@ -1081,6 +1123,17 @@
         scoreAway++;
         document.getElementById('awayScore').innerText = scoreAway;
 
+        let goalie = getGoaliePlayer();
+        if (goalie && !manualGoalieOut) {
+            let gst = statsTracker[goalie.id];
+            if (gst) {
+                gst.ga++;
+                if (gst.sg < gst.ga) {
+                    gst.sg = gst.ga;
+                }
+            }
+        }
+
         let currentOnIce = getAllOnIceIds();
         currentOnIce.forEach(pId => {
             if (statsTracker[pId]) {
@@ -1088,7 +1141,6 @@
             }
         });
 
-        // Release all players currently in the penalty box when opponent scores
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
@@ -1122,17 +1174,43 @@
         let playerStatsArray = roster.map(p => {
             let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             let cleanNum = String(p.number || '').replace('#', '').trim();
-            return {
-                jersey: cleanNum,
-                playerName: p.surname || '',
-                position: p.position || '',
-                toi: formatTOI(st.toiSeconds),
-                goals: st.goals,
-                assists: st.assists,
-                pim: st.pim,
-                shots: st.shots,
-                plusMinus: st.plusMinus
-            };
+            let isGK = isGoalie(p);
+
+            if (isGK) {
+                let sg = st.sg || 0;
+                let ga = st.ga || 0;
+                let saves = Math.max(0, sg - ga);
+                let savePctDecimal = sg > 0 ? Number((saves / sg).toFixed(3)) : 0;
+                return {
+                    jersey: cleanNum,
+                    playerName: p.surname || '',
+                    position: p.position || 'G',
+                    toi: formatTOI(st.toiSeconds),
+                    goals: 0,
+                    assists: 0,
+                    pim: 0,
+                    sg: sg,
+                    ga: ga,
+                    shots: sg,
+                    saves: saves,
+                    savePct: savePctDecimal
+                };
+            } else {
+                return {
+                    jersey: cleanNum,
+                    playerName: p.surname || '',
+                    position: p.position || '',
+                    toi: formatTOI(st.toiSeconds),
+                    goals: st.goals,
+                    assists: st.assists,
+                    pim: st.pim,
+                    sg: 0,
+                    ga: 0,
+                    shots: st.shots,
+                    saves: 0,
+                    savePct: 0
+                };
+            }
         });
 
         matchSetup.playerStats = playerStatsArray;
