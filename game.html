@@ -33,8 +33,10 @@
             font-size: 1.2rem;
             font-weight: bold;
         }
-        .score-num { color: #10b981; font-size: 1.8rem; }
-        .away-score-num { color: #ef4444; font-size: 1.8rem; }
+        .team-box { text-align: center; }
+        .score-num { color: #10b981; font-size: 1.8rem; display: block; }
+        .away-score-num { color: #ef4444; font-size: 1.8rem; display: block; }
+        .shot-subtext { font-size: 0.8rem; color: #94a3b8; font-weight: normal; margin-top: 2px; }
         .badge {
             background-color: #0284c7;
             color: white;
@@ -52,7 +54,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            margin-left: 15px;
+            margin-top: 6px;
         }
         .btn-away-goal:hover { background-color: #b91c1c; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -100,6 +102,12 @@
             display: inline-block;
         }
         .goalie-status-out { color: #ef4444; }
+        .game-situation-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+        }
         .game-situation-badge {
             background: #f59e0b;
             color: #0f172a;
@@ -107,7 +115,11 @@
             border-radius: 4px;
             font-size: 0.75rem;
             font-weight: bold;
-            margin-left: 8px;
+        }
+        .penalty-timer {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #f8fafc;
         }
 
         .event-log {
@@ -144,15 +156,24 @@
     <!-- Scoreboard Header -->
     <div class="card">
         <div class="scoreboard">
-            <div><span id="displayHome">Home</span> <span class="score-num" id="homeScore">0</span></div>
-            <div>
-                <span id="displayPeriod" class="badge">PERIOD 1</span> 
-                <span id="gameClock" style="margin-left: 15px; font-family: monospace; color: #38bdf8;">17:00</span>
-                <span id="clockStatus" style="font-size: 0.75rem; margin-left: 5px; color: #ef4444;">[STOPPED]</span>
-                <span id="gameSituation" class="game-situation-badge">EV</span>
+            <div class="team-box">
+                <span id="displayHome">Home</span> 
+                <span class="score-num" id="homeScore">0</span>
+                <div class="shot-subtext">Shots: <span id="homeShotsTotal">0</span></div>
             </div>
             <div>
-                <span class="away-score-num" id="awayScore">0</span> <span id="displayAway">Away</span>
+                <span id="displayPeriod" class="badge">PERIOD 1</span> 
+                <span id="gameClock" style="margin-left: 10px; font-family: monospace; color: #38bdf8;">17:00</span>
+                <span id="clockStatus" style="font-size: 0.75rem; margin-left: 5px; color: #ef4444;">[STOPPED]</span>
+                <div class="game-situation-container">
+                    <span id="gameSituation" class="game-situation-badge">EV</span>
+                    <span id="penaltyTimerDisplay" class="penalty-timer" style="display: none;">2:00</span>
+                </div>
+            </div>
+            <div class="team-box">
+                <span id="displayAway">Away</span> 
+                <span class="away-score-num" id="awayScore">0</span>
+                <div class="shot-subtext">Shots: <span id="awayShotsTotal">0</span></div>
                 <button class="btn-away-goal" onclick="recordAwayGoal()">Opponent Goal [+ O]</button>
             </div>
         </div>
@@ -172,7 +193,7 @@
 
                 <h3>Live Event Feed</h3>
                 <div class="event-log" id="eventLog">
-                    <div class="event-item">[17:00] Tracker initialized. Press Space Bar to start clock.</div>
+                    <div class="event-item">[17:00] Tracker initialized. Press [Q] for Opponent Shot.</div>
                 </div>
             </div>
         </div>
@@ -242,15 +263,21 @@
     let activeDefenseIds = [];
     let activeSpecialIds = [];
     let isSpecialTeamsMode = false;
-    let currentSituation = 'EV'; // EV, PP, PK
+    let currentSituation = 'EV';
     let scoreHome = 0;
     let scoreAway = 0;
+    let homeShots = 0;
+    let awayShots = 0;
 
     let clockSeconds = 17 * 60; 
     let clockInterval = null;
     let isClockRunning = false;
     let currentPeriod = 1;
     let manualGoalieOut = false;
+
+    // Penalty Timer variables
+    let penaltySecondsRemaining = 0;
+    let penaltyTimerInterval = null;
 
     document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
     document.getElementById('displayAway').innerText = matchSetup.awayTeam || 'Away';
@@ -272,6 +299,7 @@
     function toggleClock() {
         if (isClockRunning) {
             clearInterval(clockInterval);
+            if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
             isClockRunning = false;
             document.getElementById('clockStatus').innerText = "[STOPPED]";
             document.getElementById('clockStatus').style.color = "#ef4444";
@@ -288,16 +316,54 @@
                     updateClockDisplay();
                 } else {
                     clearInterval(clockInterval);
+                    if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
                     isClockRunning = false;
                     document.getElementById('clockStatus').innerText = "[PERIOD END]";
                     handlePeriodEnd();
                 }
             }, 1000);
+
+            // Run penalty countdown if active
+            if (currentSituation !== 'EV' && penaltySecondsRemaining > 0) {
+                startPenaltyTimerInterval();
+            }
         }
+    }
+
+    function startPenaltyTimerInterval() {
+        if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+        penaltyTimerInterval = setInterval(() => {
+            if (penaltySecondsRemaining > 0) {
+                penaltySecondsRemaining--;
+                updatePenaltyTimerDisplay();
+            } else {
+                clearInterval(penaltyTimerInterval);
+                currentSituation = 'EV';
+                updateSituationBadge();
+                logEvent("Penalty expired. Situation returned to Even Strength (EV).");
+            }
+        }, 1000);
+    }
+
+    function triggerPenaltyCountdown() {
+        penaltySecondsRemaining = 2 * 60; // 2 minutes
+        updatePenaltyTimerDisplay();
+        document.getElementById('penaltyTimerDisplay').style.display = 'inline';
+        if (isClockRunning) {
+            startPenaltyTimerInterval();
+        }
+    }
+
+    function updatePenaltyTimerDisplay() {
+        let mins = Math.floor(penaltySecondsRemaining / 60);
+        let secs = penaltySecondsRemaining % 60;
+        document.getElementById('penaltyTimerDisplay').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
     function handlePeriodEnd() {
         logEvent(`Period ${currentPeriod} ended.`);
+        if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+        document.getElementById('penaltyTimerDisplay').style.display = 'none';
 
         if (currentPeriod === 1) {
             currentPeriod = 2;
@@ -306,6 +372,8 @@
             document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
             logEvent("Period 2 ready. Press Space Bar to start.");
             manualGoalieOut = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
             updateGraphicalRink();
             updateClockDisplay();
         } else if (currentPeriod === 2) {
@@ -315,6 +383,8 @@
             document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
             logEvent("Period 3 ready. Press Space Bar to start.");
             manualGoalieOut = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
             updateGraphicalRink();
             updateClockDisplay();
         } else if (currentPeriod === 3) {
@@ -327,6 +397,8 @@
                     document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
                     logEvent("Overtime ready. Press Space Bar to start.");
                     manualGoalieOut = false;
+                    currentSituation = 'EV';
+                    updateSituationBadge();
                     updateGraphicalRink();
                     updateClockDisplay();
                     return;
@@ -350,9 +422,14 @@
     function updateSituationBadge() {
         let badge = document.getElementById('gameSituation');
         badge.innerText = currentSituation;
-        if (currentSituation === 'PP') badge.style.background = '#10b981';
-        else if (currentSituation === 'PK') badge.style.background = '#ef4444';
-        else badge.style.background = '#f59e0b';
+        if (currentSituation === 'PP') {
+            badge.style.background = '#10b981';
+        } else if (currentSituation === 'PK') {
+            badge.style.background = '#ef4444';
+        } else {
+            badge.style.background = '#f59e0b';
+            document.getElementById('penaltyTimerDisplay').style.display = 'none';
+        }
     }
 
     function renderControlsReference() {
@@ -380,8 +457,9 @@
         html += `
             <hr style="border-color: #334155; margin: 8px 0;">
             <p><span>Space Bar:</span> Start / Stop Clock</p>
+            <p><span>Q:</span> Shot on Own Goal (Opponent Shot)</p>
             <p><span>Shift + [Key]:</span> Sub Single Player On Ice</p>
-            <p><span>G/A/S/P + [Key]:</span> Record Stat</p>
+            <p><span>G/A/S/P + [Key]:</span> Record Stat (On-Ice Only)</p>
         `;
         box.innerHTML = html;
     }
@@ -447,6 +525,15 @@
 
         let key = e.key.toUpperCase();
 
+        // Hotkey Q for Shot on Own Goalie (Opponent Shot)
+        if (key === 'Q' && !e.shiftKey && !pendingModifier) {
+            e.preventDefault();
+            awayShots++;
+            document.getElementById('awayShotsTotal').innerText = awayShots;
+            logEvent(`Shot on Own Goal (Opponent Shot recorded)`);
+            return;
+        }
+
         if (e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
             e.preventDefault();
             handleLineHotkey(key);
@@ -492,10 +579,11 @@
                     if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
                 }
             });
-            currentSituation = 'PP'; // Opponent serving penalty -> we are on Power Play
+            currentSituation = 'PP';
             updateSituationBadge();
+            triggerPenaltyCountdown();
             let rosterList = getCurrentOnIceNumbersList();
-            logEvent(`Special Teams deployed -> ${upperKey} (PP)`, rosterList);
+            logEvent(`Special Teams deployed -> ${upperKey} (PP - Opponent in penalty box)`, rosterList);
         } else if (upperKey.startsWith('PK')) {
             isSpecialTeamsMode = true;
             activeSpecialIds = [];
@@ -504,10 +592,11 @@
                     if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
                 }
             });
-            currentSituation = 'PK'; // We are serving penalty -> Penalty Kill
+            currentSituation = 'PK';
             updateSituationBadge();
+            triggerPenaltyCountdown();
             let rosterList = getCurrentOnIceNumbersList();
-            logEvent(`Special Teams deployed -> ${upperKey} (PK)`, rosterList);
+            logEvent(`Special Teams deployed -> ${upperKey} (PK - We are in penalty box)`, rosterList);
         } else {
             isSpecialTeamsMode = false;
             currentSituation = 'EV';
@@ -629,20 +718,28 @@
     }
 
     function recordStat(mod, player) {
+        let cleanNum = String(player.number || '').replace('#', '').trim();
+        let currentOnIce = getAllOnIceIds();
+        let isOnIce = currentOnIce.includes(String(player.id));
+
+        if (mod !== 'P' && !isOnIce) {
+            logEvent(`⚠️ BLOCKED: #${cleanNum} ${player.surname} is NOT on ice! Cannot record [${mod}].`);
+            alert(`Player #${cleanNum} (${player.surname}) is NOT currently on ice and cannot record a ${mod}!`);
+            return;
+        }
+
         let st = statsTracker[player.id];
         if (!st) {
             st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
             statsTracker[player.id] = st;
         }
-        let cleanNum = String(player.number || '').replace('#', '').trim();
+
         if (mod === 'G') {
             st.goals++;
             scoreHome++;
             document.getElementById('homeScore').innerText = scoreHome;
             
-            // Award Plus (+) to everyone currently on ice
-            let onIce = getAllOnIceIds();
-            onIce.forEach(pId => {
+            currentOnIce.forEach(pId => {
                 if (statsTracker[pId]) {
                     statsTracker[pId].plusMinus++;
                 }
@@ -654,6 +751,8 @@
             logEvent(`Assist credited`, ` (${cleanNum})`);
         } else if (mod === 'S') {
             st.shots++;
+            homeShots++;
+            document.getElementById('homeShotsTotal').innerText = homeShots;
             logEvent(`Shot on Goal`, ` (${cleanNum})`);
         } else if (mod === 'P') {
             st.pim += 2;
@@ -666,9 +765,8 @@
         scoreAway++;
         document.getElementById('awayScore').innerText = scoreAway;
 
-        // Award Minus (-) to everyone currently on ice
-        let onIce = getAllOnIceIds();
-        onIce.forEach(pId => {
+        let currentOnIce = getAllOnIceIds();
+        currentOnIce.forEach(pId => {
             if (statsTracker[pId]) {
                 statsTracker[pId].plusMinus--;
             }
