@@ -170,7 +170,7 @@
         tbody.innerHTML = '';
         roster.forEach((p, idx) => {
             tbody.innerHTML += `<tr>
-                <td><strong>#${p.number || ''}</strong></td>
+                <td><strong>${p.number || ''}</strong></td>
                 <td>${p.firstName || ''} ${p.surname || ''} ${p.nickname ? '('+p.nickname+')' : ''}</td>
                 <td>${p.position || ''}</td>
                 <td style="text-align: center;">
@@ -299,7 +299,7 @@
     function createPlayerSelect(selectId) {
         let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
         roster.forEach(p => {
-            let label = `#${p.number || ''} - ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
+            let label = `${p.number || ''} - ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
             html += `<option value="${p.id}">${label}</option>`;
         });
         html += `</select>`;
@@ -309,7 +309,7 @@
     function getPlayerReadable(id) {
         if (!id) return "None";
         let p = roster.find(item => String(item.id) === String(id));
-        return p ? `#${p.number} ${p.firstName} ${p.surname}` : "Unknown";
+        return p ? `${p.number} ${p.firstName} ${p.surname}` : "Unknown";
     }
 
     window.saveLinesAndProceed = async function() {
