@@ -1,1 +1,1038 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Hockey Match Tracker - Step 3: Live Game Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1250px; margin: 0 auto; }
+        .grid-dashboard { display: grid; grid-template-columns: 2fr 1.2fr; gap: 20px; }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: #38bdf8; margin-top: 0; }
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .team-box { text-align: center; }
+        .score-num { color: #10b981; font-size: 1.8rem; display: block; }
+        .away-score-num { color: #ef4444; font-size: 1.8rem; display: block; }
+        .shot-subtext { font-size: 0.8rem; color: #94a3b8; font-weight: normal; margin-top: 2px; }
+        .badge {
+            background-color: #0284c7;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .btn-away-goal {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+        .btn-away-goal:hover { background-color: #b91c1c; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        th { background-color: #0f172a; color: #94a3b8; }
+        
+        /* Graphical Rink Layout */
+        .rink-container {
+            background: radial-gradient(circle, #1e3a8a 0%, #0f172a 80%);
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .rink-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        .rink-player-card {
+            background-color: rgba(15, 23, 42, 0.9);
+            border: 1px solid #0284c7;
+            border-radius: 6px;
+            padding: 8px 12px;
+            min-width: 100px;
+            text-align: center;
+        }
+        .rink-pos { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+        .rink-num-hotkey { font-size: 1.1rem; color: #38bdf8; font-weight: bold; }
+        .rink-hotkey-tag { background: #0369a1; color: #e0f2fe; padding: 1px 5px; border-radius: 3px; font-size: 0.75rem; margin-left: 4px; }
+        .rink-name { font-size: 0.85rem; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+        
+        /* Penalty Box Status Board */
+        .penalty-box-container {
+            background-color: #0f172a;
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .penalty-box-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .penalty-box-item:last-child { margin-bottom: 0; }
+        .penalty-countdown { font-family: monospace; color: #ef4444; font-weight: bold; font-size: 1.1rem; }
+
+        /* Compact Goalie Status Line */
+        .goalie-status-bar {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #334155;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #10b981;
+            display: inline-block;
+        }
+        .goalie-status-out { color: #ef4444; }
+        .game-situation-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+        }
+        .game-situation-badge {
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .penalty-timer {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #ef4444;
+            font-weight: bold;
+            background: rgba(239, 68, 68, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .event-log {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        .event-item { margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+        .hotkey-ref-box {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            line-height: 1.3;
+        }
+        .hotkey-ref-box span { color: #38bdf8; font-weight: bold; }
+        .btn-danger { background-color: #ef4444; color: white; border: none; padding: 12px; font-size: 1rem; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-danger:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Live Game Tracker</h1>
+
+    <!-- Scoreboard Header -->
+    <div class="card">
+        <div class="scoreboard">
+            <div class="team-box">
+                <span id="displayHome">Home</span> 
+                <span class="score-num" id="homeScore">0</span>
+                <div class="shot-subtext">Shots: <span id="homeShotsTotal">0</span></div>
+            </div>
+            <div>
+                <span id="displayPeriod" class="badge">PERIOD 1</span> 
+                <span id="gameClock" style="margin-left: 10px; font-family: monospace; color: #38bdf8;">17:00</span>
+                <span id="clockStatus" style="font-size: 0.75rem; margin-left: 5px; color: #ef4444;">[STOPPED]</span>
+                <div class="game-situation-container">
+                    <span id="gameSituation" class="game-situation-badge">EV</span>
+                    <span id="penaltyTimerDisplay" class="penalty-timer" style="display: none;">2:00</span>
+                </div>
+            </div>
+            <div class="team-box">
+                <span id="displayAway">Away</span> 
+                <span class="away-score-num" id="awayScore">0</span>
+                <div class="shot-subtext">Shots: <span id="awayShotsTotal">0</span></div>
+                <button class="btn-away-goal" onclick="recordAwayGoal()">Opponent Goal [+ O]</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-dashboard">
+        <!-- Left Column: Graphical Rink, Penalty Box & Feed -->
+        <div>
+            <div class="card">
+                <h2>Currently On Ice (Graphical Rink)</h2>
+                <div class="rink-container">
+                    <div style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold;">ATTACK ZONE ➔</div>
+                    <div class="rink-row" id="rinkForwards"></div>
+                    <div class="rink-row" id="rinkDefense"></div>
+                    <div id="goalieStatusBarContainer"></div>
+                </div>
+
+                <h2>Penalty Box Status</h2>
+                <div class="penalty-box-container" id="penaltyBoxBoard">
+                    <div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>
+                </div>
+
+                <h3>Live Event Feed</h3>
+                <div class="event-log" id="eventLog">
+                    <div class="event-item">[17:00] Tracker initialized. Press Space Bar to start clock.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Controls Reference & Full Roster -->
+        <div>
+            <div class="card">
+                <h2>Controls & Line Rosters</h2>
+                <div class="hotkey-ref-box" id="controlsReferenceBox"></div>
+                <button class="btn-danger" onclick="endGameAndSync()">End Match & Sync Stats to Google Sheets</button>
+            </div>
+
+            <div class="card">
+                <h2>Active Roster</h2>
+                <div>
+                    <table>
+                        <thead>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>G/A/S/P</th><th>TOI</th><th>+/-</th></tr>
+                        </thead>
+                        <tbody id="rosterHotkeyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let matchSetup = {};
+    try {
+        matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+    } catch(e) { matchSetup = {}; }
+
+    let roster = matchSetup.roster;
+    if (!roster || roster.length === 0) {
+        try { roster = JSON.parse(localStorage.getItem('hockeyMasterRoster')); } catch(e) {}
+    }
+    if (!roster || roster.length === 0) {
+        try { roster = JSON.parse(localStorage.getItem('roster')); } catch(e) {}
+    }
+
+    if (!roster || roster.length === 0) {
+        roster = [
+            { id: "1", number: "55", firstName: "Richard", surname: "Tesarik", position: "F", hotkey: "A" },
+            { id: "2", number: "71", firstName: "Jan", surname: "Cernoch", position: "F", hotkey: "B" },
+            { id: "3", number: "3", firstName: "Ray", surname: "Khalil", position: "D", hotkey: "C" },
+            { id: "4", number: "5", firstName: "Slavo", surname: "Boris", position: "D", hotkey: "D" },
+            { id: "5", number: "39", firstName: "Jim", surname: "Zvonicek", position: "G", hotkey: "E" }
+        ];
+        matchSetup.roster = roster;
+    }
+
+    let lines = matchSetup.lines || {};
+    let lineShortcuts = matchSetup.lineShortcuts || {
+        'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
+        'd1': 'F4', 'd2': 'F5',
+        '4v4': 'F11',
+        'PP1': 'F6', 'PP2': 'F7',
+        'PK1': 'F8', 'PK2': 'F9', 'PK3': 'F10'
+    };
+
+    let statsTracker = {};
+    roster.forEach(p => {
+        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+    });
+
+    let activeForwardIds = [];
+    let activeDefenseIds = [];
+    let activeSpecialIds = [];
+    let isSpecialTeamsMode = false;
+    let currentSituation = 'EV'; // EV, 4v4, PP, PK
+    let scoreHome = 0;
+    let scoreAway = 0;
+    let homeShots = 0;
+    let awayShots = 0;
+
+    let clockSeconds = 17 * 60; 
+    let clockInterval = null;
+    let isClockRunning = false;
+    let currentPeriod = 1;
+    let manualGoalieOut = false;
+
+    let penaltyTimerInterval = null;
+
+    document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
+    document.getElementById('displayAway').innerText = matchSetup.awayTeam || 'Away';
+
+    function initTracker() {
+        renderControlsReference();
+        renderRosterTable();
+        updateGraphicalRink();
+        updatePenaltyBoxBoard();
+        updateClockDisplay();
+    }
+
+    function getGoaliePlayer() {
+        return roster.find(p => {
+            let pos = String(p.position || '').toUpperCase().trim();
+            return pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
+        });
+    }
+
+    function toggleClock() {
+        if (isClockRunning) {
+            clearInterval(clockInterval);
+            if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+            isClockRunning = false;
+            document.getElementById('clockStatus').innerText = "[STOPPED]";
+            document.getElementById('clockStatus').style.color = "#ef4444";
+            logEvent("Clock stopped");
+        } else {
+            isClockRunning = true;
+            document.getElementById('clockStatus').innerText = "[RUNNING]";
+            document.getElementById('clockStatus').style.color = "#10b981";
+            logEvent("Clock started");
+            
+            clockInterval = setInterval(() => {
+                if (clockSeconds > 0) {
+                    clockSeconds--;
+                    updateClockDisplay();
+                    tickActivePenalties();
+                    accumulateTOI();
+                } else {
+                    clearInterval(clockInterval);
+                    if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+                    isClockRunning = false;
+                    document.getElementById('clockStatus').innerText = "[PERIOD END]";
+                    handlePeriodEnd();
+                }
+            }, 1000);
+
+            startPenaltyTimerIntervalIfNeeded();
+        }
+    }
+
+    function startPenaltyTimerIntervalIfNeeded() {
+        let hasActivePenalty = roster.some(p => statsTracker[p.id] && statsTracker[p.id].penaltySeconds > 0);
+        if (hasActivePenalty && !penaltyTimerInterval) {
+            penaltyTimerInterval = setInterval(() => {
+                tickActivePenalties();
+            }, 1000);
+        }
+    }
+
+    function tickActivePenalties() {
+        let activePenaltiesExist = false;
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                st.penaltySeconds--;
+                activePenaltiesExist = true;
+                if (st.penaltySeconds === 0) {
+                    let cleanNum = String(p.number || '').replace('#', '').trim();
+                    logEvent(`Player #${cleanNum} (${p.surname}) penalty expired. Returned from box.`);
+                }
+            }
+        });
+
+        if (!activePenaltiesExist) {
+            if (penaltyTimerInterval) {
+                clearInterval(penaltyTimerInterval);
+                penaltyTimerInterval = null;
+            }
+            if (currentSituation === 'PK') {
+                currentSituation = 'EV';
+                updateSituationBadge();
+                logEvent("All penalties expired. Situation returned to Even Strength (EV).");
+            }
+        }
+
+        renderRosterTable();
+        updatePenaltyBoxBoard();
+    }
+
+    function accumulateTOI() {
+        let currentOnIce = getAllOnIceIds();
+        currentOnIce.forEach(pId => {
+            if (statsTracker[pId]) {
+                statsTracker[pId].toiSeconds++;
+            }
+        });
+        renderRosterTable();
+    }
+
+    function formatTOI(totalSeconds) {
+        let mins = Math.floor(totalSeconds / 60);
+        let secs = totalSeconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    function handlePeriodEnd() {
+        logEvent(`Period ${currentPeriod} ended.`);
+        if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
+        penaltyTimerInterval = null;
+
+        if (currentPeriod === 1) {
+            currentPeriod = 2;
+            clockSeconds = 17 * 60;
+            document.getElementById('displayPeriod').innerText = "PERIOD 2";
+            document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
+            logEvent("Period 2 ready. Press Space Bar to start.");
+            manualGoalieOut = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
+            updateGraphicalRink();
+            updateClockDisplay();
+        } else if (currentPeriod === 2) {
+            currentPeriod = 3;
+            clockSeconds = 17 * 60;
+            document.getElementById('displayPeriod').innerText = "PERIOD 3";
+            document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
+            logEvent("Period 3 ready. Press Space Bar to start.");
+            manualGoalieOut = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
+            updateGraphicalRink();
+            updateClockDisplay();
+        } else if (currentPeriod === 3) {
+            if (scoreHome === scoreAway) {
+                let goOT = confirm("Score is tied after 3 periods! Do you want to go to Overtime (OT)?");
+                if (goOT) {
+                    currentPeriod = 'OT';
+                    clockSeconds = 5 * 60;
+                    document.getElementById('displayPeriod').innerText = "OVERTIME";
+                    document.getElementById('clockStatus').innerText = "[READY - SPACEBAR]";
+                    logEvent("Overtime ready. Press Space Bar to start.");
+                    manualGoalieOut = false;
+                    currentSituation = 'EV';
+                    updateSituationBadge();
+                    updateGraphicalRink();
+                    updateClockDisplay();
+                    return;
+                }
+            }
+            document.getElementById('clockStatus').innerText = "[MATCH FINAL]";
+            logEvent("Match ended.");
+        } else if (currentPeriod === 'OT') {
+            document.getElementById('clockStatus').innerText = "[MATCH FINAL]";
+            logEvent("Overtime ended. Match final.");
+        }
+    }
+
+    function updateClockDisplay() {
+        let mins = Math.floor(clockSeconds / 60);
+        let secs = clockSeconds % 60;
+        let timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        document.getElementById('gameClock').innerText = timeStr;
+    }
+
+    function updateSituationBadge() {
+        let badge = document.getElementById('gameSituation');
+        badge.innerText = currentSituation;
+        if (currentSituation === 'PP') {
+            badge.style.background = '#10b981';
+        } else if (currentSituation === 'PK') {
+            badge.style.background = '#ef4444';
+        } else if (currentSituation === '4v4') {
+            badge.style.background = '#38bdf8';
+        } else {
+            badge.style.background = '#f59e0b';
+        }
+    }
+
+    function updatePenaltyBoxBoard() {
+        let boxBoard = document.getElementById('penaltyBoxBoard');
+        let topTimerEl = document.getElementById('penaltyTimerDisplay');
+        let boxItems = [];
+        let lowestSecs = 999999;
+
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                if (st.penaltySeconds < lowestSecs) {
+                    lowestSecs = st.penaltySeconds;
+                }
+                let cleanNum = String(p.number || '').replace('#', '').trim();
+                let pMins = Math.floor(st.penaltySeconds / 60);
+                let pSecs = st.penaltySeconds % 60;
+                let timeStr = `${pMins}:${pSecs < 10 ? '0' : ''}${pSecs}`;
+                boxItems.push(`
+                    <div class="penalty-box-item">
+                        <span>🚨 <strong>#${cleanNum} ${p.surname}</strong> (${p.position || ''})</span>
+                        <span class="penalty-countdown">${timeStr}</span>
+                    </div>
+                `);
+            }
+        });
+
+        if (boxItems.length > 0) {
+            boxBoard.innerHTML = boxItems.join('');
+            let tMins = Math.floor(lowestSecs / 60);
+            let tSecs = lowestSecs % 60;
+            topTimerEl.innerText = `${tMins}:${tSecs < 10 ? '0' : ''}${tSecs}`;
+            topTimerEl.style.display = 'inline';
+        } else {
+            boxBoard.innerHTML = `<div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>`;
+            topTimerEl.style.display = 'none';
+        }
+    }
+
+    function renderControlsReference() {
+        let box = document.getElementById('controlsReferenceBox');
+        let html = `<p style="margin-bottom: 8px; color: #f8fafc; font-weight: bold;">Line Quick View (Player Numbers):</p>`;
+
+        let lineKeysOrder = ['f1', 'f2', 'f3', 'd1', 'd2', '4v4', 'PP1', 'PP2', 'PK1', 'PK2', 'PK3'];
+        lineKeysOrder.forEach(lKey => {
+            let shortcutKey = lineShortcuts[lKey] || lKey.toUpperCase();
+            let playerNums = [];
+            
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith(lKey.toLowerCase())) {
+                    let pId = lines[slotKey];
+                    if (pId) {
+                        let p = roster.find(item => String(item.id) === String(pId));
+                        if (p) playerNums.push(String(p.number || '').replace('#', '').trim());
+                    }
+                }
+            });
+
+            html += `<p style="margin: 3px 0;"><span>[${shortcutKey}] ${lKey.toUpperCase()}:</span> ${playerNums.length > 0 ? playerNums.join(', ') : 'None'}</p>`;
+        });
+
+        html += `
+            <hr style="border-color: #334155; margin: 8px 0;">
+            <p><span>Space Bar:</span> Start / Stop Clock</p>
+            <p><span>F11:</span> Set 4v4 Formation</p>
+            <p><span>Q:</span> Shot on Own Goal (Opponent Shot)</p>
+            <p><span>Shift + [Key]:</span> Sub Single Player On Ice</p>
+            <p><span>P + [Key]:</span> Record Penalty (Sends to Box)</p>
+            <p><span>G/A/S + [Key]:</span> Record Stat (On-Ice Only)</p>
+        `;
+        box.innerHTML = html;
+    }
+
+    function renderRosterTable() {
+        let tbody = document.getElementById('rosterHotkeyBody');
+        tbody.innerHTML = '';
+        let currentOnIce = getAllOnIceIds();
+
+        roster.forEach(p => {
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+            let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
+            let cleanNum = String(p.number || '').replace('#', '').trim();
+            let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
+            let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
+            let toiFormatted = formatTOI(st.toiSeconds);
+            let surnameOnly = p.surname || '';
+            
+            let penaltyDisplay = "";
+            if (st.penaltySeconds > 0) {
+                let pMins = Math.floor(st.penaltySeconds / 60);
+                let pSecs = st.penaltySeconds % 60;
+                penaltyDisplay = ` <span style="color: #ef4444; font-size: 0.8rem;">[Box: ${pMins}:${pSecs < 10 ? '0' : ''}${pSecs}]</span>`;
+            }
+            
+            tbody.innerHTML += `<tr style="${isOnIce}">
+                <td><span class="badge">${p.hotkey || '-'}</span></td>
+                <td>${cleanNum}</td>
+                <td>${surnameOnly}${penaltyDisplay}</td>
+                <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
+                <td>${toiFormatted}</td>
+                <td style="${pmColor} font-weight: bold;">${pmFormatted}</td>
+            </tr>`;
+        });
+    }
+
+    function getAllOnIceIds() {
+        let ids = isSpecialTeamsMode ? [...activeSpecialIds] : [...activeForwardIds, ...activeDefenseIds];
+        let goalie = getGoaliePlayer();
+        if (goalie && !manualGoalieOut && !ids.includes(String(goalie.id))) {
+            ids.push(String(goalie.id));
+        }
+        return ids.filter(id => {
+            let st = statsTracker[id];
+            return !st || st.penaltySeconds === 0;
+        });
+    }
+
+    function getCurrentOnIceNumbersList() {
+        let ids = getAllOnIceIds();
+        let nums = [];
+        ids.forEach(id => {
+            let p = roster.find(item => String(item.id) === String(id));
+            if (p) {
+                let cleanNum = String(p.number || '').replace('#', '').trim();
+                if (cleanNum) nums.push(cleanNum);
+            }
+        });
+        return nums.length > 0 ? ` [${nums.join(', ')}]` : '';
+    }
+
+    function logEvent(text, extraSuffix = '') {
+        let feed = document.getElementById('eventLog');
+        let timeStr = document.getElementById('gameClock').innerText;
+        feed.innerHTML = `<div class="event-item">[${timeStr}] ${text}${extraSuffix}</div>` + feed.innerHTML;
+    }
+
+    let pendingModifier = null;
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            toggleClock();
+            return;
+        }
+
+        let key = e.key.toUpperCase();
+
+        if (e.code === 'F11') {
+            e.preventDefault();
+            
+            let candidateIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith('4v4')) {
+                    if (lines[slotKey]) candidateIds.push(String(lines[slotKey]));
+                }
+            });
+
+            let penalizedPlayer = candidateIds.find(id => statsTracker[id] && statsTracker[id].penaltySeconds > 0);
+            if (penalizedPlayer) {
+                let pObj = roster.find(item => String(item.id) === String(penalizedPlayer));
+                let pNum = pObj ? String(pObj.number || '').replace('#', '').trim() : '';
+                alert(`Cannot deploy 4v4: Player #${pNum} (${pObj ? pObj.surname : ''}) is currently serving a penalty in the box!`);
+                logEvent(`⚠️ BLOCKED: 4v4 deployment denied due to player #${pNum} in penalty box.`);
+                return;
+            }
+
+            currentSituation = '4v4';
+            isSpecialTeamsMode = false;
+            activeForwardIds = [];
+            activeDefenseIds = [];
+            
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith('4v4')) {
+                    if (lines[slotKey]) {
+                        if (slotKey.includes('f')) activeForwardIds.push(String(lines[slotKey]));
+                        if (slotKey.includes('d')) activeDefenseIds.push(String(lines[slotKey]));
+                    }
+                }
+            });
+
+            updateSituationBadge();
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`Situation set to 4v4 formation.`, rosterList);
+            updateGraphicalRink();
+            renderRosterTable();
+            return;
+        }
+
+        if (key === 'Q' && !e.shiftKey && !pendingModifier) {
+            e.preventDefault();
+            awayShots++;
+            document.getElementById('awayShotsTotal').innerText = awayShots;
+            logEvent(`Shot on Own Goal (Opponent Shot recorded)`);
+            return;
+        }
+
+        if (e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
+            e.preventDefault();
+            handleLineHotkey(key);
+            return;
+        }
+
+        if (['SHIFT', 'CONTROL', 'ALT', 'META'].includes(e.key.toUpperCase())) return;
+
+        if (!pendingModifier && ['G', 'A', 'S', 'P'].includes(key) && !e.shiftKey) {
+            pendingModifier = key;
+            let pObj = roster.find(p => String(p.hotkey).toUpperCase() === key);
+            let pNum = pObj ? ` (${String(pObj.number || '').replace('#', '').trim()})` : '';
+            logEvent(`Modifier [${key}] active. Press player hotkey...${pNum}`);
+            e.preventDefault();
+            return;
+        }
+
+        let matchedPlayer = roster.find(p => String(p.hotkey).toUpperCase() === key);
+        if (matchedPlayer) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                toggleSinglePlayerSub(matchedPlayer);
+            } else if (pendingModifier) {
+                recordStat(pendingModifier, matchedPlayer);
+                pendingModifier = null;
+            }
+        } else if (pendingModifier) {
+            pendingModifier = null;
+        }
+    });
+
+    function handleLineHotkey(key) {
+        let matchedLineKey = Object.keys(lineShortcuts).find(k => lineShortcuts[k].toUpperCase() === key);
+        if (!matchedLineKey) return;
+
+        let upperKey = matchedLineKey.toUpperCase();
+
+        let candidateIds = [];
+        Object.keys(lines).forEach(slotKey => {
+            if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
+                if (lines[slotKey]) candidateIds.push(String(lines[slotKey]));
+            }
+        });
+
+        let penalizedPlayer = candidateIds.find(id => statsTracker[id] && statsTracker[id].penaltySeconds > 0);
+        if (penalizedPlayer) {
+            let pObj = roster.find(item => String(item.id) === String(penalizedPlayer));
+            let pNum = pObj ? String(pObj.number || '').replace('#', '').trim() : '';
+            alert(`Cannot deploy ${upperKey}: Player #${pNum} (${pObj ? pObj.surname : ''}) is currently serving a penalty in the box!`);
+            logEvent(`⚠️ BLOCKED: ${upperKey} deployment denied due to player #${pNum} in penalty box.`);
+            return;
+        }
+
+        if (upperKey.startsWith('PP')) {
+            isSpecialTeamsMode = true;
+            activeSpecialIds = [];
+            candidateIds.forEach(id => activeSpecialIds.push(id));
+            currentSituation = 'PP';
+            updateSituationBadge();
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`Special Teams deployed -> ${upperKey} (PP - Opponent in penalty box)`, rosterList);
+        } else if (upperKey.startsWith('PK')) {
+            isSpecialTeamsMode = true;
+            activeSpecialIds = [];
+            candidateIds.forEach(id => activeSpecialIds.push(id));
+            currentSituation = 'PK';
+            updateSituationBadge();
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`Special Teams deployed -> ${upperKey} (PK - We are in penalty box)`, rosterList);
+        } else {
+            isSpecialTeamsMode = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
+            let targetIds = candidateIds;
+
+            if (upperKey.startsWith('F')) {
+                activeForwardIds = targetIds;
+                let rosterList = getCurrentOnIceNumbersList();
+                logEvent(`Forward Line changed -> ${upperKey}`, rosterList);
+            } else if (upperKey.startsWith('D')) {
+                activeDefenseIds = targetIds;
+                let rosterList = getCurrentOnIceNumbersList();
+                logEvent(`Defense Pair changed -> ${upperKey}`, rosterList);
+            }
+        }
+
+        updateGraphicalRink();
+        renderRosterTable();
+    }
+
+    function updateGraphicalRink() {
+        let fContainer = document.getElementById('rinkForwards');
+        let dContainer = document.getElementById('rinkDefense');
+        let goalieBarContainer = document.getElementById('goalieStatusBarContainer');
+        
+        fContainer.innerHTML = '';
+        dContainer.innerHTML = '';
+        goalieBarContainer.innerHTML = '';
+
+        let goalie = getGoaliePlayer();
+        if (goalie) {
+            let cleanNum = String(goalie.number || '').replace('#', '').trim();
+            let hotkeyTag = goalie.hotkey ? `[${goalie.hotkey}]` : '';
+            if (!manualGoalieOut) {
+                goalieBarContainer.innerHTML = `<div class="goalie-status-bar">🟢 Goalie In: #${cleanNum} ${goalie.surname || ''} ${hotkeyTag}</div>`;
+            } else {
+                goalieBarContainer.innerHTML = `<div class="goalie-status-bar goalie-status-out">🔴 Goalie Out: #${cleanNum} ${goalie.surname || ''} ${hotkeyTag}</div>`;
+            }
+        } else {
+            goalieBarContainer.innerHTML = `<div class="goalie-status-bar goalie-status-out">Goalie: None Assigned</div>`;
+        }
+
+        let ids = getAllOnIceIds();
+        let forwards = [];
+        let defense = [];
+
+        ids.forEach(id => {
+            let p = roster.find(item => String(item.id) === String(id));
+            if (p) {
+                let pos = String(p.position || '').toUpperCase().trim();
+                let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
+                if (isGoalie) return;
+
+                let cleanNum = String(p.number || '').replace('#', '').trim();
+                let hotkeyTag = p.hotkey ? `<span class="rink-hotkey-tag">${p.hotkey}</span>` : '';
+                
+                let cardHtml = `
+                    <div class="rink-player-card">
+                        <div class="rink-pos">${p.position || ''}</div>
+                        <div class="rink-num-hotkey">${cleanNum}${hotkeyTag}</div>
+                        <div class="rink-name">${p.surname || ''}</div>
+                    </div>`;
+                
+                if (pos.includes('D')) {
+                    defense.push(cardHtml);
+                } else {
+                    forwards.push(cardHtml);
+                }
+            }
+        });
+
+        fContainer.innerHTML = forwards.join('') || '<div style="color:#94a3b8; font-size:0.85rem;">No forwards on ice</div>';
+        dContainer.innerHTML = defense.join('') || '<div style="color:#94a3b8; font-size:0.85rem;">No defense on ice</div>';
+    }
+
+    function toggleSinglePlayerSub(player) {
+        let idStr = String(player.id);
+        let st = statsTracker[idStr];
+        let cleanNum = String(player.number || '').replace('#', '').trim();
+
+        if (st && st.penaltySeconds > 0) {
+            alert(`Cannot sub player #${cleanNum} (${player.surname}): Currently serving a penalty in the box!`);
+            logEvent(`⚠️ BLOCKED: Sub toggle denied for #${cleanNum} in penalty box.`);
+            return;
+        }
+
+        let pos = String(player.position || '').toUpperCase().trim();
+        let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
+
+        if (isGoalie) {
+            manualGoalieOut = !manualGoalieOut;
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`Goalie manually ${manualGoalieOut ? 'OUT' : 'IN'} (${cleanNum})`, rosterList);
+            updateGraphicalRink();
+            renderRosterTable();
+            return;
+        }
+
+        let currentOnIce = getAllOnIceIds();
+        let index = currentOnIce.indexOf(idStr);
+
+        if (isSpecialTeamsMode) {
+            if (index > -1) { activeSpecialIds.splice(activeSpecialIds.indexOf(idStr), 1); }
+            else { activeSpecialIds.push(idStr); }
+        } else {
+            if (pos.includes('D')) {
+                let dIdx = activeDefenseIds.indexOf(idStr);
+                if (dIdx > -1) activeDefenseIds.splice(dIdx, 1);
+                else activeDefenseIds.push(idStr);
+            } else {
+                let fIdx = activeForwardIds.indexOf(idStr);
+                if (fIdx > -1) activeForwardIds.splice(fIdx, 1);
+                else activeForwardIds.push(idStr);
+            }
+        }
+
+        let rosterList = getCurrentOnIceNumbersList();
+        logEvent(`Manual Sub toggled (${cleanNum})`, rosterList);
+        updateGraphicalRink();
+        renderRosterTable();
+    }
+
+    function recordStat(mod, player) {
+        let cleanNum = String(player.number || '').replace('#', '').trim();
+        let currentOnIce = getAllOnIceIds();
+        let isOnIce = currentOnIce.includes(String(player.id));
+
+        if (mod !== 'P' && !isOnIce) {
+            logEvent(`⚠️ BLOCKED: #${cleanNum} ${player.surname} is NOT on ice! Cannot record [${mod}].`);
+            alert(`Player #${cleanNum} (${player.surname}) is NOT currently on ice and cannot record a ${mod}!`);
+            return;
+        }
+
+        let st = statsTracker[player.id];
+        if (!st) {
+            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+            statsTracker[player.id] = st;
+        }
+
+        if (mod === 'G') {
+            st.goals++;
+            scoreHome++;
+            document.getElementById('homeScore').innerText = scoreHome;
+            
+            currentOnIce.forEach(pId => {
+                if (statsTracker[pId]) {
+                    statsTracker[pId].plusMinus++;
+                }
+            });
+
+            logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
+
+            if (currentSituation === 'PP') {
+                currentSituation = 'EV';
+                updateSituationBadge();
+                logEvent(`Power Play goal scored! PP ended -> Both teams full strength (EV).`);
+            } else if (currentSituation === 'PK') {
+                logEvent(`Short-handed goal scored! Penalty Kill continues.`);
+            }
+
+        } else if (mod === 'A') {
+            st.assists++;
+            logEvent(`Assist credited`, ` (${cleanNum})`);
+        } else if (mod === 'S') {
+            st.shots++;
+            homeShots++;
+            document.getElementById('homeShotsTotal').innerText = homeShots;
+            logEvent(`Shot on Goal`, ` (${cleanNum})`);
+        } else if (mod === 'P') {
+            st.pim += 2;
+            st.penaltySeconds = 2 * 60; // 2 minutes in penalty box
+            
+            if (isOnIce) {
+                activeForwardIds = activeForwardIds.filter(id => id !== String(player.id));
+                activeDefenseIds = activeDefenseIds.filter(id => id !== String(player.id));
+                activeSpecialIds = activeSpecialIds.filter(id => id !== String(player.id));
+            }
+
+            // Automatically switch to PK and load PK1 onto the ice
+            currentSituation = 'PK';
+            isSpecialTeamsMode = true;
+            activeSpecialIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith('pk1')) {
+                    if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
+                }
+            });
+
+            updateSituationBadge();
+            updateGraphicalRink();
+
+            if (!penaltyTimerInterval && isClockRunning) {
+                penaltyTimerInterval = setInterval(() => {
+                    tickActivePenalties();
+                }, 1000);
+            }
+
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`PENALTY (2 min) assigned to #${cleanNum} ${player.surname}. Sent to box. Auto-switched to PK (PK1 deployed).`, rosterList);
+        }
+        renderRosterTable();
+        updatePenaltyBoxBoard();
+    }
+
+    function recordAwayGoal() {
+        scoreAway++;
+        document.getElementById('awayScore').innerText = scoreAway;
+
+        let currentOnIce = getAllOnIceIds();
+        currentOnIce.forEach(pId => {
+            if (statsTracker[pId]) {
+                statsTracker[pId].plusMinus--;
+            }
+        });
+
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                st.penaltySeconds = 0;
+                let cNum = String(p.number || '').replace('#', '').trim();
+                logEvent(`Opponent goal scored -> Player #${cNum} (${p.surname}) released early from penalty box.`);
+            }
+        });
+
+        logEvent(`OPPONENT GOAL! Conceded. [Plus/Minus -1 awarded to on-ice players]`);
+
+        if (currentSituation === 'PP') {
+            logEvent(`Opponent scored during our Power Play -> PP continues.`);
+        } else if (currentSituation === 'PK') {
+            if (penaltyTimerInterval) {
+                clearInterval(penaltyTimerInterval);
+                penaltyTimerInterval = null;
+            }
+            currentSituation = 'EV';
+            updateSituationBadge();
+            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV.`);
+        }
+
+        renderRosterTable();
+        updatePenaltyBoxBoard();
+    }
+
+    async function endGameAndSync() {
+        if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
+
+        let playerStatsArray = roster.map(p => {
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
+            let cleanNum = String(p.number || '').replace('#', '').trim();
+            return {
+                jersey: cleanNum,
+                playerName: p.surname || '',
+                position: p.position || '',
+                toi: formatTOI(st.toiSeconds),
+                goals: st.goals,
+                assists: st.assists,
+                pim: st.pim,
+                shots: st.shots,
+                plusMinus: st.plusMinus
+            };
+        });
+
+        matchSetup.playerStats = playerStatsArray;
+
+        try {
+            await fetch(matchSetup.scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(matchSetup)
+            });
+            alert('Match finished! Stats successfully recorded to your Google Sheet PlayerStats tab.');
+        } catch (err) {
+            console.error('Sync error:', err);
+            alert('Error syncing to Google Sheets. Saved locally.');
+        }
+    }
+
+    window.onload = initTracker;
+</script>
+
+</body>
+</html>
