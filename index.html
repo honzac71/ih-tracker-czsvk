@@ -261,4 +261,66 @@
 
     function backgroundFetchRoster() {
         let script = document.createElement('script');
-        script.src = SCRIPT_URL + '?callback
+        script.src = SCRIPT_URL + '?callback=handleRosterResponse';
+        script.onerror = () => {
+            let cached = localStorage.getItem('hockeyMasterRoster');
+            if (cached) {
+                masterRoster = JSON.parse(cached);
+                renderGameRoster();
+            } else {
+                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets.</td></tr>';
+            }
+        };
+        document.body.appendChild(script);
+    }
+
+    function saveAndProceed() {
+        let selectedCheckboxes = document.querySelectorAll('.player-checkbox:checked');
+        let activeRoster = [];
+
+        selectedCheckboxes.forEach((cb, idx) => {
+            let playerId = cb.getAttribute('data-id');
+            let playerObj = masterRoster.find(p => String(p.id) === String(playerId));
+            if (playerObj) {
+                activeRoster.push({
+                    ...playerObj,
+                    hotkey: hotkeyPool[idx % hotkeyPool.length]
+                });
+            }
+        });
+
+        if (activeRoster.length === 0) { 
+            alert('Please select at least one player for today\'s game.'); 
+            return; 
+        }
+
+        let matchSettings = {
+            scriptUrl: SCRIPT_URL,
+            tournamentName: document.getElementById('tournamentName').value,
+            homeTeam: document.getElementById('homeTeam').value,
+            awayTeam: document.getElementById('awayTeam').value,
+            gameStage: document.getElementById('gameStage').value,
+            matchDate: document.getElementById('matchDate').value,
+            matchTime: document.getElementById('matchTime').value,
+            location: document.getElementById('locationSelect').value,
+            periodLength: document.getElementById('periodLength').value,
+            allowOT: document.getElementById('allowOT').checked,
+            allowSO: document.getElementById('allowSO').checked,
+            roster: activeRoster
+        };
+
+        localStorage.setItem('hockeyLastMatchSettings', JSON.stringify(matchSettings));
+        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSettings));
+
+        // Redirection to Page 2
+        window.location.href = 'lines.html';
+    }
+
+    window.onload = () => {
+        initFormDefaults();
+        backgroundFetchRoster();
+    };
+</script>
+
+</body>
+</html>
