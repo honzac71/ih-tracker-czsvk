@@ -299,7 +299,8 @@
     function createPlayerSelect(selectId) {
         let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
         roster.forEach(p => {
-            let label = `${p.number || ''} - ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
+            let cleanNumber = String(p.number || '').replace('#', '').trim();
+            let label = `${cleanNumber} - ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
             html += `<option value="${p.id}">${label}</option>`;
         });
         html += `</select>`;
@@ -309,7 +310,9 @@
     function getPlayerReadable(id) {
         if (!id) return "None";
         let p = roster.find(item => String(item.id) === String(id));
-        return p ? `${p.number} ${p.firstName} ${p.surname}` : "Unknown";
+        if (!p) return "Unknown";
+        let cleanNumber = String(p.number || '').replace('#', '').trim();
+        return `${cleanNumber} ${p.firstName} ${p.surname}`;
     }
 
     window.saveLinesAndProceed = async function() {
