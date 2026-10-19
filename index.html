@@ -58,6 +58,18 @@
         .btn-success { background-color: #10b981; width: 100%; padding: 14px; font-size: 1.1rem; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .tally-box {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            background-color: #0f172a;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            font-size: 0.95rem;
+        }
+        .tally-item { color: #94a3b8; }
+        .tally-item span { color: #38bdf8; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -131,7 +143,7 @@
     <!-- Match Roster Selection Card -->
     <div class="card">
         <h2>Select Today's Playing Roster</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded automatically from Google Sheets (Active players with 'Y').</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded automatically from Google Sheets (Sorted by Jersey #).</p>
         
         <table id="gameRosterTable">
             <thead>
@@ -147,6 +159,14 @@
                 <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Connecting to Google Sheets...</td></tr>
             </tbody>
         </table>
+
+        <!-- Position Tally Summary -->
+        <div class="tally-box">
+            <div class="tally-item">Forwards (F): <span id="tallyF">0</span></div>
+            <div class="tally-item">Defense (D): <span id="tallyD">0</span></div>
+            <div class="tally-item">Goalies (G): <span id="tallyG">0</span></div>
+            <div class="tally-item" style="margin-left: auto;">Total Selected: <span id="tallyTotal">0</span></div>
+        </div>
     </div>
 
     <button class="btn-success" onclick="saveAndProceed()">Save Match Setup & Proceed to Step 2 ➔</button>
@@ -172,7 +192,6 @@
         }
     }
 
-    // Global callback function for JSONP
     function handleRosterResponse(result) {
         if (result && result.status === 'success' && result.players) {
             masterRoster = result.players;
@@ -188,44 +207,68 @@
         
         let activePlayers = masterRoster.filter(p => {
             let val = String(p.current || '').trim().toUpperCase();
-            return val === 'Y';
+            return val !== 'N' && val !== 'FALSE' && val !== 'NO';
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Make sure "current" is set to Y in your Google Sheet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet.</td></tr>';
+            updateTally([]);
             return;
         }
 
+        // Sort players numerically by Jersey Number
+        activePlayers.sort((a, b) => {
+            let numA = parseInt(a.number) || 999;
+            let numB = parseInt(b.number) || 999;
+            return numA - numB;
+        });
+
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
-            let cleanFirst = String(p.firstName || '').trim();
-            let cleanSur = String(p.surname || '').trim();
-            let cleanNick = String(p.nickname || '').trim();
-            let cleanNum = String(p.number || '').trim();
-            let cleanPos = String(p.position || '').trim();
-
             tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked></td>
-                <td><strong>#${cleanNum}</strong></td>
-                <td>${cleanFirst} ${cleanSur}</td>
-                <td><span style="color: #38bdf8;">${cleanNick}</span></td>
-                <td>${cleanPos}</td>
+                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
+                <td><strong>#${p.number}</strong></td>
+                <td>${p.firstName} ${p.surname}</td>
+                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
+                <td>${p.position}</td>
             </tr>`;
         });
+
+        updateTallyFromUI();
+    }
+
+    function updateTallyFromUI() {
+        let checkedBoxes = document.querySelectorAll('.player-checkbox:checked');
+        let tally = { F: 0, D: 0, G: 0, Total: 0 };
+
+        checkedBoxes.forEach(cb => {
+            let playerId = cb.getAttribute('data-id');
+            let p = masterRoster.find(item => String(item.id) === String(playerId));
+            if (p) {
+                let pos = String(p.position || '').trim().toUpperCase();
+                if (pos.includes('F')) tally.F++;
+                else if (pos.includes('D')) tally.D++;
+                else if (pos.includes('G')) tally.G++;
+                tally.Total++;
+            }
+        });
+
+        document.getElementById('tallyF').innerText = tally.F;
+        document.getElementById('tallyD').innerText = tally.D;
+        document.getElementById('tallyG').innerText = tally.G;
+        document.getElementById('tallyTotal').innerText = tally.Total;
     }
 
     function backgroundFetchRoster() {
-        // Using JSONP via script tag injection to completely bypass CORS
         let script = document.createElement('script');
         script.src = SCRIPT_URL + '?callback=handleRosterResponse';
         script.onerror = () => {
-            console.error('JSONP failed to load');
             let cached = localStorage.getItem('hockeyMasterRoster');
             if (cached) {
                 masterRoster = JSON.parse(cached);
                 renderGameRoster();
             } else {
-                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets. Check connection.</td></tr>';
+                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets.</td></tr>';
             }
         };
         document.body.appendChild(script);
