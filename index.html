@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Hockey Match Tracker - Step 1: Setup & Master Roster</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1, h2 { color: #38bdf8; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #0284c7;
+            cursor: pointer;
+            margin: 0;
+        }
+        button {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #0369a1; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th { background-color: #0f172a; color: #94a3b8; }
+        .btn-danger { background-color: #ef4444; padding: 6px 10px; }
+        .btn-success { background-color: #10b981; width: 100%; padding: 14px; font-size: 1.1rem; }
+        .flex-row { display: flex; gap: 10px; align-items: flex-end; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .hotkey-badge { background: #0f172a; border: 1px solid #334155; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Ice Hockey Match & Roster Setup</h1>
+    
+    <!-- Match Details -->
+    <div class="card">
+        <h2>Match Details</h2>
+        
+        <div class="form-group">
+            <label>Tournament Name</label>
+            <input type="text" id="tournamentName" placeholder="e.g. La Coupe des Montagnes 2026">
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Our Team (Home/Adjustable)</label>
+                <input type="text" id="homeTeam" value="Czechoslovakia">
+            </div>
+            <div>
+                <label>Opponent Team (Away)</label>
+                <input type="text" id="awayTeam" placeholder="e.g. Opponent">
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div>
+                <label>Game / Round Stage</label>
+                <select id="gameStage">
+                    <option value="Game 1">Game 1</option>
+                    <option value="Game 2">Game 2</option>
+                    <option value="Game 3">Game 3</option>
+                    <option value="SF">Semi-Final (SF)</option>
+                    <option value="F">Final (F)</option>
+                </select>
+            </div>
+            <div>
+                <label>Date</label>
+                <input type="date" id="matchDate">
+            </div>
+            <div>
+                <label>Time</label>
+                <input type="time" id="matchTime" value="19:00">
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div>
+                <label>Location / Rink</label>
+                <select id="locationSelect">
+                    <option value="Queenstown Ice Arena">Queenstown Ice Arena</option>
+                    <option value="Sydney Ice Arena">Sydney Ice Arena</option>
+                    <option value="Macquarie Ice Rink">Macquarie Ice Rink</option>
+                    <option value="Penrith Ice Palace">Penrith Ice Palace</option>
+                    <option value="O'Brien Icehouse">O'Brien Icehouse</option>
+                </select>
+            </div>
+            <div>
+                <label>Period Length (Minutes)</label>
+                <input type="number" id="periodLength" value="17">
+            </div>
+            <div style="display: flex; align-items: center; gap: 20px; padding-top: 25px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="allowOT" checked> OT</label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="allowSO" checked> Shootout</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Roster Selection Card -->
+    <div class="card">
+        <h2>Select Today's Playing Roster</h2>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Check the players participating in this game from your saved master roster.</p>
+        
+        <table id="gameRosterTable">
+            <thead>
+                <tr>
+                    <th style="width: 50px; text-align: center;">Play</th>
+                    <th style="width: 80px;">#</th>
+                    <th>Name</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody id="gameRosterBody">
+                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">No players in master roster yet. Add them below.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Master Roster Management Card -->
+    <div class="card">
+        <h2>Manage Master Roster (Club Database)</h2>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Add new players permanently to your club database here.</p>
+        
+        <div class="flex-row">
+            <div style="flex: 2;">
+                <label>First Name</label>
+                <input type="text" id="playerFirstName" placeholder="e.g. Honza">
+            </div>
+            <div style="flex: 2;">
+                <label>Surname</label>
+                <input type="text" id="playerSurname" placeholder="e.g. Novak">
+            </div>
+            <div style="flex: 1;">
+                <label>Jersey #</label>
+                <input type="number" id="playerNum" placeholder="55">
+            </div>
+            <div style="flex: 1.5;">
+                <label>Position</label>
+                <select id="playerPosition">
+                    <option value="Forward">Forward</option>
+                    <option value="Defence">Defence</option>
+                    <option value="Goalie">Goalie</option>
+                </select>
+            </div>
+            <div>
+                <button type="button" onclick="addToMasterRoster()" style="margin-bottom: 15px; height: 41px;">Add to Club</button>
+            </div>
+        </div>
+
+        <table id="masterTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Position</th>
+                    <th style="text-align: right;">Delete from Club</th>
+                </tr>
+            </thead>
+            <tbody id="masterBody">
+                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">No master players saved.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <button class="btn-success" onclick="saveAndProceed()">Save Match Setup & Proceed to Step 2 ➔</button>
+</div>
+
+<script>
+    const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    
+    let masterRoster = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
+
+    function initFormDefaults() {
+        let today = new Date().toISOString().split('T')[0];
+        document.getElementById('matchDate').value = today;
+
+        let lastSettings = JSON.parse(localStorage.getItem('hockeyLastMatchSettings'));
+        if (lastSettings) {
+            if (lastSettings.tournamentName) document.getElementById('tournamentName').value = lastSettings.tournamentName;
+            if (lastSettings.homeTeam) document.getElementById('homeTeam').value = lastSettings.homeTeam;
+            if (lastSettings.awayTeam) document.getElementById('awayTeam').value = lastSettings.awayTeam;
+            if (lastSettings.gameStage) document.getElementById('gameStage').value = lastSettings.gameStage;
+            if (lastSettings.location) document.getElementById('locationSelect').value = lastSettings.location;
+            if (lastSettings.periodLength) document.getElementById('periodLength').value = lastSettings.periodLength;
+        }
+    }
+
+    function renderAll() {
+        renderGameRoster();
+        renderMasterRoster();
+    }
+
+    function renderGameRoster() {
+        let tbody = document.getElementById('gameRosterBody');
+        if (masterRoster.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No players in master roster yet. Add them below.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        masterRoster.forEach(p => {
+            tbody.innerHTML += `<tr>
+                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked></td>
+                <td><strong>#${p.number}</strong></td>
