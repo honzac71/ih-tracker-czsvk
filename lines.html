@@ -35,6 +35,7 @@
         }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
         
@@ -129,7 +130,6 @@
         console.error("Storage load error:", e);
     }
 
-    // Fallback if localStorage is completely empty so page never displays blank
     if (!roster || roster.length === 0) {
         roster = [
             { id: "1", number: "55", firstName: "Test", surname: "Player", position: "F", hotkey: "A" }
@@ -236,10 +236,10 @@
             dContainer.innerHTML = html;
         }
 
-        // Special Teams PP
+        // Special Teams PP (5 players)
         let ppDiv = document.getElementById('ppContainer');
         if (ppDiv) {
-            let html = '<h3>Power Play (PP1 & PP2)</h3>';
+            let html = '<h3>Power Play (PP1 & PP2) - 5 Players</h3>';
             ['PP1', 'PP2'].forEach((unit, idx) => {
                 let currentKey = lineShortcuts[unit] || `F${idx+6}`;
                 html += `
@@ -263,10 +263,10 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK
+        // Special Teams PK (4 players: C, F, LD, RD)
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
-            let html = '<h3>Penalty Kill (PK1 & PK2)</h3>';
+            let html = '<h3>Penalty Kill (PK1 & PK2) - 4 Players (C, F, LD, RD)</h3>';
             ['PK1', 'PK2'].forEach((unit, idx) => {
                 let currentKey = lineShortcuts[unit] || `F${idx+8}`;
                 html += `
@@ -278,10 +278,9 @@
                                 <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
                             </div>
                         </div>
-                        <div class="grid-5">
-                            <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
+                        <div class="grid-4">
                             <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
-                            <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
+                            <div><label>F</label>${createPlayerSelect(`${unit}_f`)}</div>
                             <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
                             <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
                         </div>
@@ -300,7 +299,7 @@
     function createPlayerSelect(selectId) {
         let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
         roster.forEach(p => {
-            let label = `#${p.number || ''} ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
+            let label = `#${p.number || ''} - ${p.firstName || ''} ${p.surname || ''} (${p.position || ''})`;
             html += `<option value="${p.id}">${label}</option>`;
         });
         html += `</select>`;
