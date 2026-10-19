@@ -193,7 +193,7 @@
 
                 <h3>Live Event Feed</h3>
                 <div class="event-log" id="eventLog">
-                    <div class="event-item">[17:00] Tracker initialized. Press [F11] for 4v4.</div>
+                    <div class="event-item">[17:00] Tracker initialized. Press Space Bar to start clock.</div>
                 </div>
             </div>
         </div>
@@ -211,7 +211,7 @@
                 <div>
                     <table>
                         <thead>
-                            <tr><th>Key</th><th>#</th><th>Player</th><th>G/A/S/P</th><th>+/-</th></tr>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>G/A/S/P</th><th>TOI</th><th>+/-</th></tr>
                         </thead>
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
@@ -256,7 +256,7 @@
 
     let statsTracker = {};
     roster.forEach(p => {
-        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
+        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
     });
 
     let activeForwardIds = [];
@@ -314,6 +314,7 @@
                 if (clockSeconds > 0) {
                     clockSeconds--;
                     updateClockDisplay();
+                    accumulateTOI();
                 } else {
                     clearInterval(clockInterval);
                     if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
@@ -327,6 +328,22 @@
                 startPenaltyTimerInterval();
             }
         }
+    }
+
+    function accumulateTOI() {
+        let currentOnIce = getAllOnIceIds();
+        currentOnIce.forEach(pId => {
+            if (statsTracker[pId]) {
+                statsTracker[pId].toiSeconds++;
+            }
+        });
+        renderRosterTable();
+    }
+
+    function formatTOI(totalSeconds) {
+        let mins = Math.floor(totalSeconds / 60);
+        let secs = totalSeconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
     function startPenaltyTimerInterval() {
@@ -473,17 +490,20 @@
         let currentOnIce = getAllOnIceIds();
 
         roster.forEach(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
             let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
             let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
+            let toiFormatted = formatTOI(st.toiSeconds);
+            let surnameOnly = p.surname || '';
             
             tbody.innerHTML += `<tr style="${isOnIce}">
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
                 <td>${cleanNum}</td>
-                <td>${p.firstName || ''} ${p.surname || ''}</td>
+                <td>${surnameOnly}</td>
                 <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
+                <td>${toiFormatted}</td>
                 <td style="${pmColor} font-weight: bold;">${pmFormatted}</td>
             </tr>`;
         });
@@ -528,7 +548,6 @@
 
         let key = e.key.toUpperCase();
 
-        // Hotkey F11 for 4v4 Formation
         if (e.code === 'F11') {
             e.preventDefault();
             currentSituation = '4v4';
@@ -540,7 +559,6 @@
             return;
         }
 
-        // Hotkey Q for Shot on Own Goalie (Opponent Shot)
         if (key === 'Q' && !e.shiftKey && !pendingModifier) {
             e.preventDefault();
             awayShots++;
@@ -745,7 +763,7 @@
 
         let st = statsTracker[player.id];
         if (!st) {
-            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
+            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
             statsTracker[player.id] = st;
         }
 
@@ -762,16 +780,13 @@
 
             logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
 
-            // Special Teams Scoring Rules check for Home Goal
             if (currentSituation === 'PP') {
-                // PP Goal scored by us -> PP ends, both teams full strength (EV)
                 if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
                 currentSituation = 'EV';
                 updateSituationBadge();
                 logEvent(`Power Play goal scored! PP ended -> Both teams full strength (EV).`);
             } else if (currentSituation === 'PK') {
-                // Short-handed goal scored by us -> PK continues[cite: 3]
-                logEvent(`Short-handed goal scored! Penalty Kill continues[cite: 3].`);
+                logEvent(`Short-handed goal scored! Penalty Kill continues.`);
             }
 
         } else if (mod === 'A') {
@@ -802,16 +817,13 @@
 
         logEvent(`OPPONENT GOAL! Conceded. [Plus/Minus -1 awarded to on-ice players]`);
 
-        // Special Teams Scoring Rules check for Opponent Goal
         if (currentSituation === 'PP') {
-            // Opponent scores during our PP -> PP continues[cite: 3]
-            logEvent(`Opponent scored during our Power Play -> PP continues[cite: 3].`);
+            logEvent(`Opponent scored during our Power Play -> PP continues.`);
         } else if (currentSituation === 'PK') {
-            // Opponent scores during our PK -> PK ends, teams return to EV[cite: 3]
             if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
             currentSituation = 'EV';
             updateSituationBadge();
-            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV[cite: 3].`);
+            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV.`);
         }
 
         renderRosterTable();
@@ -821,13 +833,13 @@
         if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
 
         let playerStatsArray = roster.map(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
             let cleanNum = String(p.number || '').replace('#', '').trim();
             return {
                 jersey: cleanNum,
-                playerName: `${p.firstName || ''} ${p.surname || ''}`,
+                playerName: p.surname || '',
                 position: p.position || '',
-                toi: "0:00",
+                toi: formatTOI(st.toiSeconds),
                 goals: st.goals,
                 assists: st.assists,
                 pim: st.pim,
