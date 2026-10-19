@@ -75,7 +75,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F11 pre-assigned). All slots must be filled before proceeding.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F11 pre-assigned), then sync everything to your Google Sheet.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
@@ -95,7 +95,7 @@
         </table>
     </div>
 
-    <!-- Forward Lines & Defense Pairs -->
+    <!-- Forward Lines, Defense Pairs & 4v4 -->
     <div class="card">
         <h2>2. Even Strength Lines & Shortcuts</h2>
         <div id="forwardLinesContainer"></div>
@@ -151,9 +151,9 @@
     let defaultLineKeys = {
         'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
         'd1': 'F4', 'd2': 'F5',
-        '4v4': 'F11',
         'PP1': 'F6', 'PP2': 'F7',
-        'PK1': 'F8', 'PK2': 'F9'
+        'PK1': 'F8', 'PK2': 'F9', 'PK3': 'F10',
+        '4v4': 'F11'
     };
     let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
 
@@ -239,7 +239,7 @@
             dContainer.innerHTML = html;
         }
 
-        // 4v4 Formation
+        // 4v4 Formation (F11)
         let v4Container = document.getElementById('formation4v4Container');
         if (v4Container) {
             let lineId = '4v4';
@@ -290,12 +290,13 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK (4 players: C, F, LD, RD)
+        // Special Teams PK (PK1, PK2, PK3)
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
-            let html = '<h3>Penalty Kill (PK1 & PK2) - 4 Players (C, F, LD, RD)</h3>';
-            ['PK1', 'PK2'].forEach((unit, idx) => {
-                let currentKey = lineShortcuts[unit] || `F${idx+8}`;
+            let html = '<h3>Penalty Kill (PK1, PK2, PK3) - 4 Players (C, F, LD, RD)</h3>';
+            ['PK1', 'PK2', 'PK3'].forEach((unit, idx) => {
+                let defaultShortcut = idx === 2 ? 'F10' : `F${idx+8}`;
+                let currentKey = lineShortcuts[unit] || defaultShortcut;
                 html += `
                     <div class="line-row">
                         <div class="line-header">
@@ -365,7 +366,7 @@
         }
 
         let updatedLineShortcuts = {};
-        ['f1', 'f2', 'f3', 'd1', 'd2', '4v4', 'PP1', 'PP2', 'PK1', 'PK2'].forEach(id => {
+        ['f1', 'f2', 'f3', 'd1', 'd2', '4v4', 'PP1', 'PP2', 'PK1', 'PK2', 'PK3'].forEach(id => {
             let inputEl = document.getElementById(`key_${id}`);
             if (inputEl) {
                 updatedLineShortcuts[id] = inputEl.value.trim().toUpperCase();
