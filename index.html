@@ -139,11 +139,12 @@
                     <th style="width: 50px; text-align: center;">Play</th>
                     <th style="width: 80px;">#</th>
                     <th>Name</th>
+                    <th>Nickname</th>
                     <th>Position</th>
                 </tr>
             </thead>
             <tbody id="gameRosterBody">
-                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Connecting to Google Sheets...</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Connecting to Google Sheets...</td></tr>
             </tbody>
         </table>
     </div>
@@ -184,7 +185,7 @@
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet "Players" tab.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet "Players" tab.</td></tr>';
             return;
         }
 
@@ -194,6 +195,7 @@
                 <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked></td>
                 <td><strong>#${p.number}</strong></td>
                 <td>${p.firstName} ${p.surname}</td>
+                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
                 <td>${p.position}</td>
             </tr>`;
         });
@@ -201,7 +203,6 @@
 
     async function backgroundFetchRoster() {
         if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_WEB_APP_URL_HERE')) {
-            // Fallback to local storage if URL isn't configured yet
             renderGameRoster();
             return;
         }
@@ -216,7 +217,7 @@
             }
         } catch (err) {
             console.error('Background fetch failed, using cached roster:', err);
-            renderGameRoster(); // Fallback to cached local storage if offline
+            renderGameRoster();
         }
     }
 
@@ -263,7 +264,7 @@
 
     window.onload = () => {
         initFormDefaults();
-        backgroundFetchRoster(); // Automatically fetches on page load in the background
+        backgroundFetchRoster();
     };
 </script>
 
