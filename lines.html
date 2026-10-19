@@ -94,23 +94,15 @@
     <!-- Forward Lines & Defense Pairs -->
     <div class="card">
         <h2>2. Even Strength Lines & Shortcuts</h2>
-        
-        <h3>Forward Lines (LW - C - RW)</h3>
         <div id="forwardLinesContainer"></div>
-
-        <h3 style="margin-top: 25px;">Defense Pairs (D - D)</h3>
-        <div id="defensePairsContainer"></div>
+        <div id="defensePairsContainer" style="margin-top: 20px;"></div>
     </div>
 
     <!-- Special Teams -->
     <div class="card">
-        <h2>3. Special Teams Units & Shortcuts (LW - C - RW - D - D)</h2>
-        
-        <h3>Power Play (PP1 & PP2)</h3>
+        <h2>3. Special Teams Units & Shortcuts</h2>
         <div id="ppContainer"></div>
-
-        <h3 style="margin-top: 25px;">Penalty Kill (PK1 & PK2)</h3>
-        <div id="pkContainer"></div>
+        <div id="pkContainer" style="margin-top: 20px;"></div>
     </div>
 
     <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts to Google Sheets ➔ Proceed</button>
@@ -186,13 +178,14 @@
         };
 
         function renderLineBuilders() {
+            // Forward Lines
             let fContainer = document.getElementById('forwardLinesContainer');
             if (fContainer) {
-                fContainer.innerHTML = '';
+                let html = '<h3>Forward Lines (LW - C - RW)</h3>';
                 for (let i = 1; i <= 3; i++) {
                     let lineId = `f${i}`;
                     let currentKey = lineShortcuts[lineId] || `F${i}`;
-                    fContainer.innerHTML += `
+                    html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">Forward Line ${i}</span>
@@ -208,15 +201,17 @@
                             </div>
                         </div>`;
                 }
+                fContainer.innerHTML = html;
             }
 
+            // Defense Pairs
             let dContainer = document.getElementById('defensePairsContainer');
             if (dContainer) {
-                dContainer.innerHTML = '';
+                let html = '<h3>Defense Pairs (D - D)</h3>';
                 for (let i = 1; i <= 2; i++) {
                     let lineId = `d${i}`;
                     let currentKey = lineShortcuts[lineId] || `D${i}`;
-                    dContainer.innerHTML += `
+                    html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">Defense Pair ${i}</span>
@@ -231,14 +226,16 @@
                             </div>
                         </div>`;
                 }
+                dContainer.innerHTML = html;
             }
 
+            // Special Teams PP
             let ppDiv = document.getElementById('ppContainer');
             if (ppDiv) {
-                ppDiv.innerHTML = '';
+                let html = '<h3>Power Play (PP1 & PP2)</h3>';
                 ['PP1', 'PP2'].forEach(unit => {
                     let currentKey = lineShortcuts[unit] || unit;
-                    ppDiv.innerHTML += `
+                    html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">${unit} Unit</span>
@@ -256,14 +253,16 @@
                             </div>
                         </div>`;
                 });
+                ppDiv.innerHTML = html;
             }
 
+            // Special Teams PK
             let pkDiv = document.getElementById('pkContainer');
             if (pkDiv) {
-                pkDiv.innerHTML = '';
+                let html = '<h3>Penalty Kill (PK1 & PK2)</h3>';
                 ['PK1', 'PK2'].forEach(unit => {
                     let currentKey = lineShortcuts[unit] || unit;
-                    pkDiv.innerHTML += `
+                    html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">${unit} Unit</span>
@@ -281,6 +280,7 @@
                             </div>
                         </div>`;
                 });
+                pkDiv.innerHTML = html;
             }
 
             let savedLines = matchSetup.lines || {};
