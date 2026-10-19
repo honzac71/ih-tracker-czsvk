@@ -181,7 +181,8 @@
 <script>
     let matchSetup = {};
     try {
-        matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+        let stored = localStorage.getItem('hockeyMatchSetup');
+        if (stored) matchSetup = JSON.parse(stored);
     } catch(e) {
         matchSetup = {};
     }
@@ -200,8 +201,9 @@
             { id: "2", number: "71", firstName: "Jan", surname: "Cernoch", position: "F", hotkey: "B" },
             { id: "3", number: "3", firstName: "Ray", surname: "Khalil", position: "D", hotkey: "C" },
             { id: "4", number: "5", firstName: "Slavo", surname: "Boris", position: "D", hotkey: "D" },
-            { id: "5", number: "39", firstName: "Goalie", surname: "Player", position: "G", hotkey: "E" }
+            { id: "5", number: "39", firstName: "Jim", surname: "Zvonicek", position: "G", hotkey: "E" }
         ];
+        matchSetup.roster = roster;
     }
 
     let lines = matchSetup.lines || {};
@@ -362,13 +364,13 @@
         let currentOnIce = getAllOnIceIds();
 
         roster.forEach(p => {
-            let st = statsTracker[p.id];
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
             tbody.innerHTML += `<tr style="${isOnIce}">
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
                 <td>${cleanNum}</td>
-                <td>${p.firstName} ${p.surname}</td>
+                <td>${p.firstName || ''} ${p.surname || ''}</td>
                 <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
             </tr>`;
         });
@@ -498,9 +500,9 @@
             let cleanNum = String(goalie.number || '').replace('#', '').trim();
             let hotkeyTag = goalie.hotkey ? `[${goalie.hotkey}]` : '';
             if (!manualGoalieOut) {
-                goalieBarContainer.innerHTML = `<div class="goalie-status-bar">🟢 Goalie In: #${cleanNum} ${goalie.surname} ${hotkeyTag}</div>`;
+                goalieBarContainer.innerHTML = `<div class="goalie-status-bar">🟢 Goalie In: #${cleanNum} ${goalie.surname || ''} ${hotkeyTag}</div>`;
             } else {
-                goalieBarContainer.innerHTML = `<div class="goalie-status-bar goalie-status-out">🔴 Goalie Out: #${cleanNum} ${goalie.surname} ${hotkeyTag}</div>`;
+                goalieBarContainer.innerHTML = `<div class="goalie-status-bar goalie-status-out">🔴 Goalie Out: #${cleanNum} ${goalie.surname || ''} ${hotkeyTag}</div>`;
             }
         } else {
             goalieBarContainer.innerHTML = `<div class="goalie-status-bar goalie-status-out">Goalie: None Assigned</div>`;
@@ -515,16 +517,16 @@
             if (p) {
                 let pos = String(p.position || '').toUpperCase().trim();
                 let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
-                if (isGoalie) return; // Goalie handled in compact text bar above
+                if (isGoalie) return;
 
                 let cleanNum = String(p.number || '').replace('#', '').trim();
                 let hotkeyTag = p.hotkey ? `<span class="rink-hotkey-tag">${p.hotkey}</span>` : '';
                 
                 let cardHtml = `
                     <div class="rink-player-card">
-                        <div class="rink-pos">${p.position}</div>
+                        <div class="rink-pos">${p.position || ''}</div>
                         <div class="rink-num-hotkey">${cleanNum}${hotkeyTag}</div>
-                        <div class="rink-name">${p.surname}</div>
+                        <div class="rink-name">${p.surname || ''}</div>
                     </div>`;
                 
                 if (pos.includes('D')) {
@@ -580,6 +582,10 @@
 
     function recordStat(mod, player) {
         let st = statsTracker[player.id];
+        if (!st) {
+            st = { goals: 0, assists: 0, shots: 0, pim: 0 };
+            statsTracker[player.id] = st;
+        }
         let cleanNum = String(player.number || '').replace('#', '').trim();
         if (mod === 'G') {
             st.goals++;
@@ -603,12 +609,12 @@
         if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
 
         let playerStatsArray = roster.map(p => {
-            let st = statsTracker[p.id];
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0 };
             let cleanNum = String(p.number || '').replace('#', '').trim();
             return {
                 jersey: cleanNum,
-                playerName: `${p.firstName} ${p.surname}`,
-                position: p.position,
+                playerName: `${p.firstName || ''} ${p.surname || ''}`,
+                position: p.position || '',
                 toi: "0:00",
                 goals: st.goals,
                 assists: st.assists,
