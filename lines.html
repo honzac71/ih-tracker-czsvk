@@ -119,6 +119,7 @@
         matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
         roster = matchSetup.roster || [];
         
+        // Fallback checks if matchSetup roster is missing
         if (!roster || roster.length === 0) {
             let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
             if (master && master.length > 0) {
@@ -130,9 +131,13 @@
         console.error("Storage load error:", e);
     }
 
+    // Absolute fallback so page renders immediately if storage was cleared
     if (!roster || roster.length === 0) {
         roster = [
-            { id: "1", number: "55", firstName: "Test", surname: "Player", position: "F", hotkey: "A" }
+            { id: "1", number: "55", firstName: "Richard", surname: "Tesarik", position: "F", hotkey: "A" },
+            { id: "2", number: "71", firstName: "Jan", surname: "Cernoch", position: "F", hotkey: "B" },
+            { id: "3", number: "3", firstName: "Ray", surname: "Khalil", position: "D", hotkey: "C" },
+            { id: "4", number: "5", firstName: "Slavo", surname: "Boris", position: "D", hotkey: "D" }
         ];
         matchSetup.roster = roster;
     }
@@ -263,12 +268,11 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK (PK1 & PK2 = 4 players [C, F, LD, RD], PK3 = 3 players [C, LD, RD])
+        // Special Teams PK
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
             let html = '<h3>Penalty Kill Units (PK1/PK2: 4-man, PK3: 3-man C, LD, RD)</h3>';
             
-            // PK1 & PK2 (4 players)
             ['PK1', 'PK2'].forEach((unit, idx) => {
                 let currentKey = lineShortcuts[unit] || `F${idx+8}`;
                 html += `
@@ -289,7 +293,6 @@
                     </div>`;
             });
 
-            // PK3 (3 players: C, LD, RD)
             let pk3Key = lineShortcuts['PK3'] || 'F10';
             html += `
                 <div class="line-row">
@@ -335,3 +338,48 @@
         let cleanNumber = String(p.number || '').replace('#', '').trim();
         return `${cleanNumber} ${p.firstName} ${p.surname}`;
     }
+
+    window.saveLinesAndProceed = async function() {
+        let linesData = {};
+        let readableLines = {};
+        let selects = document.querySelectorAll('select');
+        
+        selects.forEach(sel => {
+            linesData[sel.id] = sel.value;
+            readableLines[sel.id] = getPlayerReadable(sel.value);
+        });
+
+        let updatedLineShortcuts = {};
+        ['f1', 'f2', 'f3', 'd1', 'd2', 'PP1', 'PP2', 'PK1', 'PK2', 'PK3'].forEach(id => {
+            let inputEl = document.getElementById(`key_${id}`);
+            if (inputEl) {
+                updatedLineShortcuts[id] = inputEl.value.trim().toUpperCase();
+            }
+        });
+
+        matchSetup.roster = roster;
+        matchSetup.lines = linesData;
+        matchSetup.readableLines = readableLines;
+        matchSetup.lineShortcuts = updatedLineShortcuts;
+
+        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
+
+        try {
+            await fetch(matchSetup.scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(matchSetup)
+            });
+        } catch (err) {
+            console.error('Sync error:', err);
+        }
+
+        window.location.href = 'game.html';
+    };
+
+    window.onload = initPage;
+</script>
+
+</body>
+</html>
