@@ -86,9 +86,7 @@
             color: #10b981;
             display: inline-block;
         }
-        .goalie-status-out {
-            color: #ef4444;
-        }
+        .goalie-status-out { color: #ef4444; }
 
         .event-log {
             background-color: #0f172a;
@@ -157,9 +155,7 @@
         <div>
             <div class="card">
                 <h2>Controls & Line Rosters</h2>
-                <div class="hotkey-ref-box" id="controlsReferenceBox">
-                    <!-- Populated dynamically -->
-                </div>
+                <div class="hotkey-ref-box" id="controlsReferenceBox"></div>
                 <button class="btn-danger" onclick="endGameAndSync()">End Match & Sync Stats to Google Sheets</button>
             </div>
 
@@ -179,22 +175,21 @@
 </div>
 
 <script>
+    // Robust data loader checking multiple localstorage keys
     let matchSetup = {};
     try {
-        let stored = localStorage.getItem('hockeyMatchSetup');
-        if (stored) matchSetup = JSON.parse(stored);
-    } catch(e) {
-        matchSetup = {};
-    }
+        matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+    } catch(e) { matchSetup = {}; }
 
-    let roster = matchSetup.roster || [];
+    let roster = matchSetup.roster;
     if (!roster || roster.length === 0) {
-        try {
-            let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
-            if (master.length > 0) roster = master;
-        } catch(e) {}
+        try { roster = JSON.parse(localStorage.getItem('hockeyMasterRoster')); } catch(e) {}
+    }
+    if (!roster || roster.length === 0) {
+        try { roster = JSON.parse(localStorage.getItem('roster')); } catch(e) {}
     }
 
+    // Final fallback data if nothing is found in storage at all
     if (!roster || roster.length === 0) {
         roster = [
             { id: "1", number: "55", firstName: "Richard", surname: "Tesarik", position: "F", hotkey: "A" },
@@ -245,7 +240,7 @@
     function getGoaliePlayer() {
         return roster.find(p => {
             let pos = String(p.position || '').toUpperCase().trim();
-            return pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
+            return pos === 'G' || pos.includes('GOALIE' ) || pos.startsWith('G');
         });
     }
 
