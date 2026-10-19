@@ -105,7 +105,7 @@
         <div id="pkContainer" style="margin-top: 20px;"></div>
     </div>
 
-    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts to Google Sheets ➔ Proceed</button>
+    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts to Google Sheets ➔ Proceed to Live Tracker</button>
 </div>
 
 <script>
@@ -165,7 +165,7 @@
             roster.forEach((p, idx) => {
                 tbody.innerHTML += `<tr>
                     <td><strong>#${p.number}</strong></td>
-                    <td>${p.firstName} ${p.surname} ${p.nickname ? '('+p.nickname+')' : ''}</td>
+                    <td>${p.firstName} ${p.surname}${p.nickname ? '('+p.nickname+')' : ''}</td>
                     <td>${p.position}</td>
                     <td style="text-align: center;">
                         <input type="text" maxlength="2" class="shortcut-input" id="p-key-${idx}" value="${p.hotkey}" onchange="updatePlayerHotkey(${idx}, this.value)">
@@ -215,130 +215,4 @@
                     html += `
                         <div class="line-row">
                             <div class="line-header">
-                                <span class="line-title">Defense Pair ${i}</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
-                                </div>
-                            </div>
-                            <div class="grid-2">
-                                <div><label>Defense Left</label>${createPlayerSelect(`${lineId}_l`)}</div>
-                                <div><label>Defense Right</label>${createPlayerSelect(`${lineId}_r`)}</div>
-                            </div>
-                        </div>`;
-                }
-                dContainer.innerHTML = html;
-            }
-
-            // Special Teams PP
-            let ppDiv = document.getElementById('ppContainer');
-            if (ppDiv) {
-                let html = '<h3>Power Play (PP1 & PP2)</h3>';
-                ['PP1', 'PP2'].forEach((unit, idx) => {
-                    let currentKey = lineShortcuts[unit] || `F${idx+6}`;
-                    html += `
-                        <div class="line-row">
-                            <div class="line-header">
-                                <span class="line-title">${unit} Unit</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
-                                </div>
-                            </div>
-                            <div class="grid-5">
-                                <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
-                                <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
-                                <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
-                                <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
-                                <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
-                            </div>
-                        </div>`;
-                });
-                ppDiv.innerHTML = html;
-            }
-
-            // Special Teams PK
-            let pkDiv = document.getElementById('pkContainer');
-            if (pkDiv) {
-                let html = '<h3>Penalty Kill (PK1 & PK2)</h3>';
-                ['PK1', 'PK2'].forEach((unit, idx) => {
-                    let currentKey = lineShortcuts[unit] || `F${idx+8}`;
-                    html += `
-                        <div class="line-row">
-                            <div class="line-header">
-                                <span class="line-title">${unit} Unit</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
-                                </div>
-                            </div>
-                            <div class="grid-5">
-                                <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
-                                <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
-                                <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
-                                <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
-                                <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
-                            </div>
-                        </div>`;
-                });
-                pkDiv.innerHTML = html;
-            }
-
-            let savedLines = matchSetup.lines || {};
-            for (let key in savedLines) {
-                let el = document.getElementById(key);
-                if (el) el.value = savedLines[key];
-            }
-        }
-
-        function createPlayerSelect(selectId) {
-            let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
-            roster.forEach(p => {
-                let label = `#${p.number} ${p.firstName} ${p.surname} (${p.position})`;
-                html += `<option value="${p.id}">${label}</option>`;
-            });
-            html += `</select>`;
-            return html;
-        }
-
-        window.saveLinesAndProceed = async function() {
-            let linesData = {};
-            let selects = document.querySelectorAll('select');
-            selects.forEach(sel => {
-                linesData[sel.id] = sel.value;
-            });
-
-            let updatedLineShortcuts = {};
-            ['f1', 'f2', 'f3', 'd1', 'd2', 'PP1', 'PP2', 'PK1', 'PK2'].forEach(id => {
-                let inputEl = document.getElementById(`key_${id}`);
-                if (inputEl) {
-                    updatedLineShortcuts[id] = inputEl.value.trim().toUpperCase();
-                }
-            });
-
-            matchSetup.roster = roster;
-            matchSetup.lines = linesData;
-            matchSetup.lineShortcuts = updatedLineShortcuts;
-
-            localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
-
-            try {
-                await fetch(matchSetup.scriptUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify(matchSetup)
-                });
-                alert('Lines and shortcuts saved successfully! Data transmitted to Google Sheets.');
-            } catch (err) {
-                console.error('Sync error:', err);
-                alert('Saved locally in browser.');
-            }
-        };
-
-        window.onload = initPage;
-    }
-</script>
-
-</body>
-</html>
+                                <span class="line-title
