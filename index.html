@@ -156,10 +156,10 @@
     // ==========================================
     // BACKEND CONFIGURATION (HARDCODED URL)
     // ==========================================
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCPaTpuBE33d_llhKb3HKgviVKxMENQAwH9KHUFlhVcQbwZsKbMQEyD6nY0aHMGXs/exec'; // Replace with your Google Apps Script Web App URL
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCPaTpuBE33d_llhKb3HKgviVKxMENQAwH9KHUFlhVcQbwZsKbMQEyD6nY0aHMGXs/exec';
     
     const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-    let masterRoster = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
+    let masterRoster = [];
 
     function initFormDefaults() {
         let today = new Date().toISOString().split('T')[0];
@@ -179,35 +179,36 @@
     function renderGameRoster() {
         let tbody = document.getElementById('gameRosterBody');
         
+        // Filter players where current is explicitly 'Y' (case-insensitive, trimming spaces)
         let activePlayers = masterRoster.filter(p => {
             let val = String(p.current || '').trim().toUpperCase();
-            // Show only if explicitly marked 'Y' (ignores blanks and 'N')
             return val === 'Y';
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Make sure "current" is set to Y.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Make sure "current" is set to Y in your Google Sheet.</td></tr>';
             return;
         }
 
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
+            let cleanFirst = String(p.firstName || '').trim();
+            let cleanSur = String(p.surname || '').trim();
+            let cleanNick = String(p.nickname || '').trim();
+            let cleanNum = String(p.number || '').trim();
+            let cleanPos = String(p.position || '').trim();
+
             tbody.innerHTML += `<tr>
                 <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked></td>
-                <td><strong>#${p.number}</strong></td>
-                <td>${p.firstName} ${p.surname}</td>
-                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
-                <td>${p.position}</td>
+                <td><strong>#${cleanNum}</strong></td>
+                <td>${cleanFirst} ${cleanSur}</td>
+                <td><span style="color: #38bdf8;">${cleanNick}</span></td>
+                <td>${cleanPos}</td>
             </tr>`;
         });
     }
 
     async function backgroundFetchRoster() {
-        if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_WEB_APP_URL_HERE')) {
-            renderGameRoster();
-            return;
-        }
-
         try {
             let response = await fetch(SCRIPT_URL);
             let result = await response.json();
@@ -215,10 +216,19 @@
                 masterRoster = result.players;
                 localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
                 renderGameRoster();
+            } else {
+                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading roster from Google Sheets.</td></tr>';
             }
         } catch (err) {
-            console.error('Background fetch failed, using cached roster:', err);
-            renderGameRoster();
+            console.error('Fetch failed:', err);
+            // Fallback to local storage cache if offline
+            let cached = localStorage.getItem('hockeyMasterRoster');
+            if (cached) {
+                masterRoster = JSON.parse(cached);
+                renderGameRoster();
+            } else {
+                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets. Check internet connection.</td></tr>';
+            }
         }
     }
 
@@ -252,8 +262,8 @@
             matchTime: document.getElementById('matchTime').value,
             location: document.getElementById('locationSelect').value,
             periodLength: document.getElementById('periodLength').value,
-            allowOT: document.getElementById('allowOT'].checked,
-            allowSO: document.getElementById('allowSO'].checked,
+            allowOT: document.getElementById('allowOT').checked,
+            allowSO: document.getElementById('allowSO').checked,
             roster: activeRoster
         };
 
