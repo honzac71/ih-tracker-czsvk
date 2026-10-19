@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Hockey Match Tracker - Step 3: Live Game Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .grid-dashboard { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: #38bdf8; margin-top: 0; }
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .score-num { color: #10b981; font-size: 1.8rem; }
+        .badge {
+            background-color: #0284c7;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        th { background-color: #0f172a; color: #94a3b8; }
+        
+        .event-log {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 10px;
+            height: 350px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        .event-item { margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
+        .hotkey-ref-box {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+        .hotkey-ref-box span { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Live Game Tracker</h1>
+
+    <!-- Scoreboard & Clock Header -->
+    <div class="card">
+        <div class="scoreboard">
+            <div><span id="displayHome">Home</span> <span class="score-num" id="homeScore">0</span></div>
+            <div>
+                <span id="displayPeriod" class="badge">PERIOD 1</span> 
+                <span id="gameClock" style="margin-left: 15px; font-family: monospace;">17:00</span>
+            </div>
+            <div><span class="score-num" id="awayScore">0</span> <span id="displayAway">Away</span></div>
+        </div>
+    </div>
+
+    <div class="grid-dashboard">
+        <!-- Left Column: Current On-Ice & Event Feed -->
+        <div>
+            <div class="card">
+                <h2>Currently On Ice (Active Unit / Players)</h2>
+                <div id="onIceDisplay" style="font-size: 1.1rem; color: #10b981; font-weight: bold; margin-bottom: 15px;">
+                    No line selected (Press F1-F9)
+                </div>
+                <h3>Live Event Feed</h3>
+                <div class="event-log" id="eventLog">
+                    <div class="event-item">[00:00] Tracker initialized. Ready for faceoff.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Hotkey Reference & Roster Quick-View -->
+        <div>
+            <div class="card">
+                <h2>Quick Reference</h2>
+                <div class="hotkey-ref-box">
+                    <p><span>F1 - F3:</span> Forward Lines 1-3</p>
+                    <p><span>F4 - F5:</span> Defense Pairs 1-2</p>
+                    <p><span>F6 - F7:</span> Power Play (PP1, PP2)</p>
+                    <p><span>F8 - F9:</span> Penalty Kill (PK1, PK2)</p>
+                    <hr style="border-color: #334155; margin: 8px 0;">
+                    <p><span>[Key]:</span> Record Goal for player</p>
+                    <p><span>Shift + [Key]:</span> Sub single player</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Active Roster Hotkeys</h2>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>Pos</th></tr>
+                        </thead>
+                        <tbody id="rosterHotkeyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+    let roster = matchSetup.roster || [];
+    let lines = matchSetup.lines || {};
+    let lineShortcuts = matchSetup.lineShortcuts || {};
+
+    // Initialize Header text
+    document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
+    document.getElementById('displayAway').innerText = matchSetup.awayTeam || 'Away';
+
+    // Populate Roster Hotkeys Table
+    function initTracker() {
+        let tbody = document.getElementById('rosterHotkeyBody');
+        tbody.innerHTML = '';
+        roster.forEach(p => {
+            tbody.innerHTML += `<tr>
+                <td><span class="badge">${p.hotkey || '-'}</span></td>
+                <td>#${p.number}</td>
+                <td>${p.firstName} ${p.surname}</td>
+                <td>${p.position}</td>
+            </tr>`;
+        });
+    }
+
+    function logEvent(text) {
+        let feed = document.getElementById('eventLog');
+        let timeStr = document.getElementById('gameClock').innerText;
+        feed.innerHTML = `<div class="event-item">[${timeStr}] ${text}</div>` + feed.innerHTML;
+    }
+
+    // Keydown listener for F1-F9 and player hotkeys
+    window.addEventListener('keydown', (e) => {
+        // Prevent default behavior for function keys so browser doesn't open help menus
+        if (e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
+            e.preventDefault();
+            handleLineHotkey(e.key.toUpperCase());
+        }
+    });
+
+    function handleLineHotkey(key) {
+        // Find which line matches this shortcut (e.g. F1, F2...)
+        let matchedLineKey = Object.keys(lineShortcuts).find(k => lineShortcuts[k].toUpperCase() === key);
+        if (matchedLineKey) {
+            activateLine(matchedLineKey);
+        }
+    }
+
+    function activateLine(lineKey) {
+        let unitName = lineKey.toUpperCase();
+        let playerIds = [];
+        
+        // Collect player IDs assigned to this line configuration
+        Object.keys(lines).forEach(slotKey => {
+            if (slotKey.startsWith(lineKey.toLowerCase()) || slotKey.startsWith(lineKey)) {
+                if (lines[slotKey]) playerIds.push(lines[slotKey]);
+            }
+        });
+
+        let playerNames = playerIds.map(id => {
+            let p = roster.find(item => String(item.id) === String(id));
+            return p ? `#${p.number} ${p.surname}` : '';
+        }).filter(Boolean).join(', ');
+
+        document.getElementById('onIceDisplay').innerText = `${unitName}: ${playerNames}`;
+        logEvent(`Shift Change -> ${unitName} (${playerNames}) on ice. [TOI tracking started]`);
+    }
+
+    window.onload = initTracker;
+</script>
+
+</body>
+</html>
