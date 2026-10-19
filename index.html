@@ -180,12 +180,13 @@
         let tbody = document.getElementById('gameRosterBody');
         
         let activePlayers = masterRoster.filter(p => {
-            let val = String(p.current).trim().toUpperCase();
-            return val !== 'N' && val !== 'FALSE' && val !== 'NO';
+            let val = String(p.current || '').trim().toUpperCase();
+            // Show only if explicitly marked 'Y' (ignores blanks and 'N')
+            return val === 'Y';
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet "Players" tab.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Make sure "current" is set to Y.</td></tr>';
             return;
         }
 
@@ -251,8 +252,8 @@
             matchTime: document.getElementById('matchTime').value,
             location: document.getElementById('locationSelect').value,
             periodLength: document.getElementById('periodLength').value,
-            allowOT: document.getElementById('allowOT').checked,
-            allowSO: document.getElementById('allowSO').checked,
+            allowOT: document.getElementById('allowOT'].checked,
+            allowSO: document.getElementById('allowSO'].checked,
             roster: activeRoster
         };
 
