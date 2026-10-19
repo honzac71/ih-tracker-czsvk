@@ -36,6 +36,7 @@
         select.error-highlight { border: 2px solid #ef4444; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .grid-3-custom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
@@ -290,17 +291,18 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK (PK1, PK2, PK3)
+        // Special Teams PK (PK1, PK2 are 4-man; PK3 is 3-man F-D-D)
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
-            let html = '<h3>Penalty Kill (PK1, PK2, PK3) - 4 Players (C, F, LD, RD)</h3>';
-            ['PK1', 'PK2', 'PK3'].forEach((unit, idx) => {
-                let defaultShortcut = idx === 2 ? 'F10' : `F${idx+8}`;
-                let currentKey = lineShortcuts[unit] || defaultShortcut;
+            let html = '<h3>Penalty Kill Units</h3>';
+            
+            // PK1 & PK2 (4 players: C, F, LD, RD)
+            ['PK1', 'PK2'].forEach((unit, idx) => {
+                let currentKey = lineShortcuts[unit] || `F${idx+8}`;
                 html += `
                     <div class="line-row">
                         <div class="line-header">
-                            <span class="line-title">${unit} Unit</span>
+                            <span class="line-title">${unit} Unit (4-Man)</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <label style="margin:0;">Line Hotkey:</label>
                                 <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
@@ -314,6 +316,25 @@
                         </div>
                     </div>`;
             });
+
+            // PK3 (3 players: F, LD, RD)
+            let pk3Key = lineShortcuts['PK3'] || 'F10';
+            html += `
+                <div class="line-row">
+                    <div class="line-header">
+                        <span class="line-title">PK3 Unit (3-Man: F - D - D)</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="margin:0;">Line Hotkey:</label>
+                            <input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${pk3Key}">
+                        </div>
+                    </div>
+                    <div class="grid-3-custom">
+                        <div><label>Forward</label>${createPlayerSelect('PK3_f')}</div>
+                        <div><label>Defense Left</label>${createPlayerSelect('PK3_ld')}</div>
+                        <div><label>Defense Right</label>${createPlayerSelect('PK3_rd')}</div>
+                    </div>
+                </div>`;
+
             pkDiv.innerHTML = html;
         }
 
