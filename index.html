@@ -143,7 +143,7 @@
     <!-- Match Roster Selection Card -->
     <div class="card">
         <h2>Select Today's Playing Roster</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded automatically from Google Sheets (Sorted by Jersey #).</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded live from Google Sheets (Sorted by Jersey #).</p>
         
         <table id="gameRosterTable">
             <thead>
@@ -218,107 +218,4 @@
 
         activePlayers.sort((a, b) => {
             let numA = parseInt(a.number) || 999;
-            let numB = parseInt(b.number) || 999;
-            return numA - numB;
-        });
-
-        tbody.innerHTML = '';
-        activePlayers.forEach(p => {
-            tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
-                <td><strong>#${p.number}</strong></td>
-                <td>${p.firstName} ${p.surname}</td>
-                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
-                <td>${p.position}</td>
-            </tr>`;
-        });
-
-        updateTallyFromUI();
-    }
-
-    function updateTallyFromUI() {
-        let checkedBoxes = document.querySelectorAll('.player-checkbox:checked');
-        let tally = { F: 0, D: 0, G: 0, Total: 0 };
-
-        checkedBoxes.forEach(cb => {
-            let playerId = cb.getAttribute('data-id');
-            let p = masterRoster.find(item => String(item.id) === String(playerId));
-            if (p) {
-                let pos = String(p.position || '').trim().toUpperCase();
-                if (pos.includes('F')) tally.F++;
-                else if (pos.includes('D')) tally.D++;
-                else if (pos.includes('G')) tally.G++;
-                tally.Total++;
-            }
-        });
-
-        document.getElementById('tallyF').innerText = tally.F;
-        document.getElementById('tallyD').innerText = tally.D;
-        document.getElementById('tallyG').innerText = tally.G;
-        document.getElementById('tallyTotal').innerText = tally.Total;
-    }
-
-    function backgroundFetchRoster() {
-        let script = document.createElement('script');
-        script.src = SCRIPT_URL + '?callback=handleRosterResponse';
-        script.onerror = () => {
-            let cached = localStorage.getItem('hockeyMasterRoster');
-            if (cached) {
-                masterRoster = JSON.parse(cached);
-                renderGameRoster();
-            } else {
-                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets.</td></tr>';
-            }
-        };
-        document.body.appendChild(script);
-    }
-
-    function saveAndProceed() {
-        let selectedCheckboxes = document.querySelectorAll('.player-checkbox:checked');
-        let activeRoster = [];
-
-        selectedCheckboxes.forEach((cb, idx) => {
-            let playerId = cb.getAttribute('data-id');
-            let playerObj = masterRoster.find(p => String(p.id) === String(playerId));
-            if (playerObj) {
-                activeRoster.push({
-                    ...playerObj,
-                    hotkey: hotkeyPool[idx % hotkeyPool.length]
-                });
-            }
-        });
-
-        if (activeRoster.length === 0) { 
-            alert('Please select at least one player for today\'s game.'); 
-            return; 
-        }
-
-        let matchSettings = {
-            scriptUrl: SCRIPT_URL,
-            tournamentName: document.getElementById('tournamentName').value,
-            homeTeam: document.getElementById('homeTeam').value,
-            awayTeam: document.getElementById('awayTeam').value,
-            gameStage: document.getElementById('gameStage').value,
-            matchDate: document.getElementById('matchDate').value,
-            matchTime: document.getElementById('matchTime').value,
-            location: document.getElementById('locationSelect').value,
-            periodLength: document.getElementById('periodLength').value,
-            allowOT: document.getElementById('allowOT').checked,
-            allowSO: document.getElementById('allowSO').checked,
-            roster: activeRoster
-        };
-
-        localStorage.setItem('hockeyLastMatchSettings', JSON.stringify(matchSettings));
-        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSettings));
-
-        window.location.href = 'lines.html';
-    }
-
-    window.onload = () => {
-        initFormDefaults();
-        backgroundFetchRoster();
-    };
-</script>
-
-</body>
-</html>
+            let numB = parseInt(
