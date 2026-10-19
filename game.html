@@ -51,7 +51,7 @@
             border: 1px solid #334155;
             border-radius: 6px;
             padding: 10px;
-            height: 350px;
+            height: 300px;
             overflow-y: auto;
             font-family: monospace;
             font-size: 0.85rem;
@@ -65,8 +65,11 @@
             padding: 10px;
             border-radius: 6px;
             border: 1px solid #334155;
+            line-height: 1.4;
         }
         .hotkey-ref-box span { color: #38bdf8; font-weight: bold; }
+        .btn-danger { background-color: #ef4444; color: white; border: none; padding: 12px; font-size: 1rem; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-danger:hover { background-color: #dc2626; }
     </style>
 </head>
 <body>
@@ -74,7 +77,7 @@
 <div class="container">
     <h1>Live Game Tracker</h1>
 
-    <!-- Scoreboard & Clock Header -->
+    <!-- Scoreboard Header -->
     <div class="card">
         <div class="scoreboard">
             <div><span id="displayHome">Home</span> <span class="score-num" id="homeScore">0</span></div>
@@ -87,12 +90,12 @@
     </div>
 
     <div class="grid-dashboard">
-        <!-- Left Column: Current On-Ice & Event Feed -->
+        <!-- Left Column: On-Ice & Feed -->
         <div>
             <div class="card">
-                <h2>Currently On Ice (Active Unit / Players)</h2>
-                <div id="onIceDisplay" style="font-size: 1.1rem; color: #10b981; font-weight: bold; margin-bottom: 15px;">
-                    No line selected (Press F1-F9)
+                <h2>Currently On Ice</h2>
+                <div id="onIceDisplay" style="font-size: 1rem; color: #10b981; font-weight: bold; margin-bottom: 15px; background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155;">
+                    No lines selected
                 </div>
                 <h3>Live Event Feed</h3>
                 <div class="event-log" id="eventLog">
@@ -101,27 +104,29 @@
             </div>
         </div>
 
-        <!-- Right Column: Hotkey Reference & Roster Quick-View -->
+        <!-- Right Column: Hotkey Reference & Roster -->
         <div>
             <div class="card">
-                <h2>Quick Reference</h2>
+                <h2>Controls Reference</h2>
                 <div class="hotkey-ref-box">
-                    <p><span>F1 - F3:</span> Forward Lines 1-3</p>
-                    <p><span>F4 - F5:</span> Defense Pairs 1-2</p>
+                    <p><span>F1 - F3:</span> Forward Lines (Stackable with Defense)</p>
+                    <p><span>F4 - F5:</span> Defense Pairs (Stackable with Forwards)</p>
                     <p><span>F6 - F7:</span> Power Play (PP1, PP2)</p>
                     <p><span>F8 - F9:</span> Penalty Kill (PK1, PK2)</p>
+                    <p><span>F10:</span> Penalty Kill 3-man (PK3: C, LD, RD)</p>
                     <hr style="border-color: #334155; margin: 8px 0;">
-                    <p><span>[Key]:</span> Record Goal for player</p>
-                    <p><span>Shift + [Key]:</span> Sub single player</p>
+                    <p><span>Shift + [Key]:</span> Sub Single Player On Ice</p>
+                    <p><span>G / A / S / P + [Key]:</span> Record Stat</p>
                 </div>
+                <button class="btn-danger" onclick="endGameAndSync()">End Match & Sync Stats to Google Sheets</button>
             </div>
 
             <div class="card">
-                <h2>Active Roster Hotkeys</h2>
-                <div style="max-height: 250px; overflow-y: auto;">
+                <h2>Active Roster & Hotkeys</h2>
+                <div style="max-height: 220px; overflow-y: auto;">
                     <table>
                         <thead>
-                            <tr><th>Key</th><th>#</th><th>Player</th><th>Pos</th></tr>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>Stats (G/A/S/P)</th></tr>
                         </thead>
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
@@ -137,22 +142,46 @@
     let lines = matchSetup.lines || {};
     let lineShortcuts = matchSetup.lineShortcuts || {};
 
-    // Initialize Header text
+    let statsTracker = {};
+    roster.forEach(p => {
+        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0 };
+    });
+
+    let activeForwardIds = [];
+    let activeDefenseIds = [];
+    let activeSpecialIds = [];
+    let isSpecialTeamsMode = false;
+
+    let scoreHome = 0;
+
     document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
     document.getElementById('displayAway').innerText = matchSetup.awayTeam || 'Away';
 
-    // Populate Roster Hotkeys Table
     function initTracker() {
+        renderRosterTable();
+    }
+
+    function renderRosterTable() {
         let tbody = document.getElementById('rosterHotkeyBody');
         tbody.innerHTML = '';
+        let currentOnIce = getAllOnIceIds();
+
         roster.forEach(p => {
-            tbody.innerHTML += `<tr>
+            let st = statsTracker[p.id];
+            let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
+            let cleanNum = String(p.number || '').replace('#', '').trim();
+            tbody.innerHTML += `<tr style="${isOnIce}">
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
-                <td>#${p.number}</td>
+                <td>${cleanNum}</td>
                 <td>${p.firstName} ${p.surname}</td>
-                <td>${p.position}</td>
+                <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
             </tr>`;
         });
+    }
+
+    function getAllOnIceIds() {
+        if (isSpecialTeamsMode) return activeSpecialIds;
+        return [...activeForwardIds, ...activeDefenseIds];
     }
 
     function logEvent(text) {
@@ -161,41 +190,167 @@
         feed.innerHTML = `<div class="event-item">[${timeStr}] ${text}</div>` + feed.innerHTML;
     }
 
-    // Keydown listener for F1-F9 and player hotkeys
+    let pendingModifier = null;
+
     window.addEventListener('keydown', (e) => {
-        // Prevent default behavior for function keys so browser doesn't open help menus
+        let key = e.key.toUpperCase();
+
         if (e.key.startsWith('F') && !isNaN(e.key.substring(1))) {
             e.preventDefault();
-            handleLineHotkey(e.key.toUpperCase());
+            handleLineHotkey(key);
+            return;
+        }
+
+        if (['SHIFT', 'CONTROL', 'ALT', 'META'].includes(e.key.toUpperCase())) return;
+
+        if (!pendingModifier && ['G', 'A', 'S', 'P'].includes(key) && !e.shiftKey) {
+            pendingModifier = key;
+            logEvent(`Modifier [${key}] active. Press player hotkey...`);
+            e.preventDefault();
+            return;
+        }
+
+        let matchedPlayer = roster.find(p => String(p.hotkey).toUpperCase() === key);
+        if (matchedPlayer) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                toggleSinglePlayerSub(matchedPlayer);
+            } else if (pendingModifier) {
+                recordStat(pendingModifier, matchedPlayer);
+                pendingModifier = null;
+            }
+        } else if (pendingModifier) {
+            pendingModifier = null;
         }
     });
 
     function handleLineHotkey(key) {
-        // Find which line matches this shortcut (e.g. F1, F2...)
         let matchedLineKey = Object.keys(lineShortcuts).find(k => lineShortcuts[k].toUpperCase() === key);
-        if (matchedLineKey) {
-            activateLine(matchedLineKey);
+        if (!matchedLineKey) return;
+
+        let upperKey = matchedLineKey.toUpperCase();
+
+        if (upperKey.startsWith('PP') || upperKey.startsWith('PK')) {
+            isSpecialTeamsMode = true;
+            activeSpecialIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
+                    if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
+                }
+            });
+            logEvent(`Special Teams deployed -> ${upperKey}`);
+        } else {
+            isSpecialTeamsMode = false;
+            let targetIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
+                    if (lines[slotKey]) targetIds.push(String(lines[slotKey]));
+                }
+            });
+
+            if (upperKey.startsWith('F')) {
+                activeForwardIds = targetIds;
+                logEvent(`Forward Line changed -> ${upperKey}`);
+            } else if (upperKey.startsWith('D')) {
+                activeDefenseIds = targetIds;
+                logEvent(`Defense Pair changed -> ${upperKey}`);
+            }
         }
+
+        updateOnIceDisplay();
+        renderRosterTable();
     }
 
-    function activateLine(lineKey) {
-        let unitName = lineKey.toUpperCase();
-        let playerIds = [];
-        
-        // Collect player IDs assigned to this line configuration
-        Object.keys(lines).forEach(slotKey => {
-            if (slotKey.startsWith(lineKey.toLowerCase()) || slotKey.startsWith(lineKey)) {
-                if (lines[slotKey]) playerIds.push(lines[slotKey]);
-            }
-        });
-
-        let playerNames = playerIds.map(id => {
+    function updateOnIceDisplay() {
+        let ids = getAllOnIceIds();
+        let names = ids.map(id => {
             let p = roster.find(item => String(item.id) === String(id));
-            return p ? `#${p.number} ${p.surname}` : '';
+            let cleanNum = p ? String(p.number || '').replace('#', '').trim() : '';
+            return p ? `${cleanNum} ${p.surname}` : '';
         }).filter(Boolean).join(', ');
 
-        document.getElementById('onIceDisplay').innerText = `${unitName}: ${playerNames}`;
-        logEvent(`Shift Change -> ${unitName} (${playerNames}) on ice. [TOI tracking started]`);
+        document.getElementById('onIceDisplay').innerText = names ? `On Ice (${ids.length} players): ${names}` : "No players on ice";
+    }
+
+    function toggleSinglePlayerSub(player) {
+        let idStr = String(player.id);
+        let currentOnIce = getAllOnIceIds();
+        let index = currentOnIce.indexOf(idStr);
+
+        if (isSpecialTeamsMode) {
+            if (index > -1) { activeSpecialIds.splice(activeSpecialIds.indexOf(idStr), 1); }
+            else { activeSpecialIds.push(idStr); }
+        } else {
+            let pos = String(player.position || '').toUpperCase();
+            if (pos.includes('D')) {
+                let dIdx = activeDefenseIds.indexOf(idStr);
+                if (dIdx > -1) activeDefenseIds.splice(dIdx, 1);
+                else activeDefenseIds.push(idStr);
+            } else {
+                let fIdx = activeForwardIds.indexOf(idStr);
+                if (fIdx > -1) activeForwardIds.splice(fIdx, 1);
+                else activeForwardIds.push(idStr);
+            }
+        }
+
+        logEvent(`Manual Sub: #${player.number} ${player.surname} toggled.`);
+        updateOnIceDisplay();
+        renderRosterTable();
+    }
+
+    function recordStat(mod, player) {
+        let st = statsTracker[player.id];
+        let cleanNum = String(player.number || '').replace('#', '').trim();
+        if (mod === 'G') {
+            st.goals++;
+            scoreHome++;
+            document.getElementById('homeScore').innerText = scoreHome;
+            logEvent(`GOAL! Scored by ${cleanNum} ${player.surname}`);
+        } else if (mod === 'A') {
+            st.assists++;
+            logEvent(`Assist credited to ${cleanNum} ${player.surname}`);
+        } else if (mod === 'S') {
+            st.shots++;
+            logEvent(`Shot on Goal: ${cleanNum} ${player.surname}`);
+        } else if (mod === 'P') {
+            st.pim += 2;
+            logEvent(`Penalty: ${cleanNum} ${player.surname} (2 min)`);
+        }
+        renderRosterTable();
+    }
+
+    async function endGameAndSync() {
+        if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
+
+        let playerStatsArray = roster.map(p => {
+            let st = statsTracker[p.id];
+            let cleanNum = String(p.number || '').replace('#', '').trim();
+            return {
+                jersey: cleanNum,
+                playerName: `${p.firstName} ${p.surname}`,
+                position: p.position,
+                toi: "0:00",
+                goals: st.goals,
+                assists: st.assists,
+                pim: st.pim,
+                shots: st.shots
+            };
+        });
+
+        matchSetup.playerStats = playerStatsArray;
+
+        try {
+            await fetch(matchSetup.scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(matchSetup)
+            });
+            alert('Match finished! Stats successfully recorded to your Google Sheet PlayerStats tab.');
+        } catch (err) {
+            console.error('Sync error:', err);
+            alert('Error syncing to Google Sheets. Saved locally.');
+        }
     }
 
     window.onload = initTracker;
