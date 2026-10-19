@@ -36,7 +36,6 @@
         select.error-highlight { border: 2px solid #ef4444; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
-        .grid-3-custom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
@@ -291,7 +290,7 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK (PK1, PK2 are 4-man; PK3 is 3-man F-D-D)
+        // Special Teams PK (PK1, PK2 are 4-man; PK3 is 3-man F-D-D mapped to F10)
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
             let html = '<h3>Penalty Kill Units</h3>';
@@ -317,21 +316,21 @@
                     </div>`;
             });
 
-            // PK3 (3 players: F, LD, RD)
+            // PK3 (3-man: C, LD, RD) mapped to F10
             let pk3Key = lineShortcuts['PK3'] || 'F10';
             html += `
                 <div class="line-row">
                     <div class="line-header">
-                        <span class="line-title">PK3 Unit (3-Man: F - D - D)</span>
+                        <span class="line-title">PK3 Unit (3-Man: C - LD - RD)</span>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <label style="margin:0;">Line Hotkey:</label>
                             <input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${pk3Key}">
                         </div>
                     </div>
-                    <div class="grid-3-custom">
-                        <div><label>Forward</label>${createPlayerSelect('PK3_f')}</div>
-                        <div><label>Defense Left</label>${createPlayerSelect('PK3_ld')}</div>
-                        <div><label>Defense Right</label>${createPlayerSelect('PK3_rd')}</div>
+                    <div class="grid-3">
+                        <div><label>Center (C)</label>${createPlayerSelect('PK3_c')}</div>
+                        <div><label>Defense Left (LD)</label>${createPlayerSelect('PK3_ld')}</div>
+                        <div><label>Defense Right (RD)</label>${createPlayerSelect('PK3_rd')}</div>
                     </div>
                 </div>`;
 
