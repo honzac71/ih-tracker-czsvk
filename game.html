@@ -34,6 +34,7 @@
             font-weight: bold;
         }
         .score-num { color: #10b981; font-size: 1.8rem; }
+        .away-score-num { color: #ef4444; font-size: 1.8rem; }
         .badge {
             background-color: #0284c7;
             color: white;
@@ -42,6 +43,18 @@
             font-size: 0.8rem;
             font-weight: bold;
         }
+        .btn-away-goal {
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+        .btn-away-goal:hover { background-color: #b91c1c; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
         th { background-color: #0f172a; color: #94a3b8; }
@@ -87,6 +100,15 @@
             display: inline-block;
         }
         .goalie-status-out { color: #ef4444; }
+        .game-situation-badge {
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
 
         .event-log {
             background-color: #0f172a;
@@ -127,8 +149,12 @@
                 <span id="displayPeriod" class="badge">PERIOD 1</span> 
                 <span id="gameClock" style="margin-left: 15px; font-family: monospace; color: #38bdf8;">17:00</span>
                 <span id="clockStatus" style="font-size: 0.75rem; margin-left: 5px; color: #ef4444;">[STOPPED]</span>
+                <span id="gameSituation" class="game-situation-badge">EV</span>
             </div>
-            <div><span class="score-num" id="awayScore">0</span> <span id="displayAway">Away</span></div>
+            <div>
+                <span class="away-score-num" id="awayScore">0</span> <span id="displayAway">Away</span>
+                <button class="btn-away-goal" onclick="recordAwayGoal()">Opponent Goal [+ O]</button>
+            </div>
         </div>
     </div>
 
@@ -164,7 +190,7 @@
                 <div>
                     <table>
                         <thead>
-                            <tr><th>Key</th><th>#</th><th>Player</th><th>Stats (G/A/S/P)</th></tr>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>G/A/S/P</th><th>+/-</th></tr>
                         </thead>
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
@@ -175,7 +201,6 @@
 </div>
 
 <script>
-    // Robust data loader checking multiple localstorage keys
     let matchSetup = {};
     try {
         matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
@@ -189,7 +214,6 @@
         try { roster = JSON.parse(localStorage.getItem('roster')); } catch(e) {}
     }
 
-    // Final fallback data if nothing is found in storage at all
     if (!roster || roster.length === 0) {
         roster = [
             { id: "1", number: "55", firstName: "Richard", surname: "Tesarik", position: "F", hotkey: "A" },
@@ -211,13 +235,14 @@
 
     let statsTracker = {};
     roster.forEach(p => {
-        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0 };
+        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
     });
 
     let activeForwardIds = [];
     let activeDefenseIds = [];
     let activeSpecialIds = [];
     let isSpecialTeamsMode = false;
+    let currentSituation = 'EV'; // EV, PP, PK
     let scoreHome = 0;
     let scoreAway = 0;
 
@@ -240,7 +265,7 @@
     function getGoaliePlayer() {
         return roster.find(p => {
             let pos = String(p.position || '').toUpperCase().trim();
-            return pos === 'G' || pos.includes('GOALIE' ) || pos.startsWith('G');
+            return pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
         });
     }
 
@@ -322,6 +347,14 @@
         document.getElementById('gameClock').innerText = timeStr;
     }
 
+    function updateSituationBadge() {
+        let badge = document.getElementById('gameSituation');
+        badge.innerText = currentSituation;
+        if (currentSituation === 'PP') badge.style.background = '#10b981';
+        else if (currentSituation === 'PK') badge.style.background = '#ef4444';
+        else badge.style.background = '#f59e0b';
+    }
+
     function renderControlsReference() {
         let box = document.getElementById('controlsReferenceBox');
         let html = `<p style="margin-bottom: 8px; color: #f8fafc; font-weight: bold;">Line Quick View (Player Numbers):</p>`;
@@ -359,14 +392,18 @@
         let currentOnIce = getAllOnIceIds();
 
         roster.forEach(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
+            let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
+            let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
+            
             tbody.innerHTML += `<tr style="${isOnIce}">
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
                 <td>${cleanNum}</td>
                 <td>${p.firstName || ''} ${p.surname || ''}</td>
                 <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
+                <td style="${pmColor} font-weight: bold;">${pmFormatted}</td>
             </tr>`;
         });
     }
@@ -447,7 +484,7 @@
 
         let upperKey = matchedLineKey.toUpperCase();
 
-        if (upperKey.startsWith('PP') || upperKey.startsWith('PK')) {
+        if (upperKey.startsWith('PP')) {
             isSpecialTeamsMode = true;
             activeSpecialIds = [];
             Object.keys(lines).forEach(slotKey => {
@@ -455,10 +492,26 @@
                     if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
                 }
             });
+            currentSituation = 'PP'; // Opponent serving penalty -> we are on Power Play
+            updateSituationBadge();
             let rosterList = getCurrentOnIceNumbersList();
-            logEvent(`Special Teams deployed -> ${upperKey}`, rosterList);
+            logEvent(`Special Teams deployed -> ${upperKey} (PP)`, rosterList);
+        } else if (upperKey.startsWith('PK')) {
+            isSpecialTeamsMode = true;
+            activeSpecialIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
+                    if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
+                }
+            });
+            currentSituation = 'PK'; // We are serving penalty -> Penalty Kill
+            updateSituationBadge();
+            let rosterList = getCurrentOnIceNumbersList();
+            logEvent(`Special Teams deployed -> ${upperKey} (PK)`, rosterList);
         } else {
             isSpecialTeamsMode = false;
+            currentSituation = 'EV';
+            updateSituationBadge();
             let targetIds = [];
             Object.keys(lines).forEach(slotKey => {
                 if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
@@ -578,7 +631,7 @@
     function recordStat(mod, player) {
         let st = statsTracker[player.id];
         if (!st) {
-            st = { goals: 0, assists: 0, shots: 0, pim: 0 };
+            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
             statsTracker[player.id] = st;
         }
         let cleanNum = String(player.number || '').replace('#', '').trim();
@@ -586,7 +639,16 @@
             st.goals++;
             scoreHome++;
             document.getElementById('homeScore').innerText = scoreHome;
-            logEvent(`GOAL! Scored`, ` (${cleanNum})`);
+            
+            // Award Plus (+) to everyone currently on ice
+            let onIce = getAllOnIceIds();
+            onIce.forEach(pId => {
+                if (statsTracker[pId]) {
+                    statsTracker[pId].plusMinus++;
+                }
+            });
+
+            logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
         } else if (mod === 'A') {
             st.assists++;
             logEvent(`Assist credited`, ` (${cleanNum})`);
@@ -600,11 +662,27 @@
         renderRosterTable();
     }
 
+    function recordAwayGoal() {
+        scoreAway++;
+        document.getElementById('awayScore').innerText = scoreAway;
+
+        // Award Minus (-) to everyone currently on ice
+        let onIce = getAllOnIceIds();
+        onIce.forEach(pId => {
+            if (statsTracker[pId]) {
+                statsTracker[pId].plusMinus--;
+            }
+        });
+
+        logEvent(`OPPONENT GOAL! Conceded. [Plus/Minus -1 awarded to on-ice players]`);
+        renderRosterTable();
+    }
+
     async function endGameAndSync() {
         if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
 
         let playerStatsArray = roster.map(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0 };
             let cleanNum = String(p.number || '').replace('#', '').trim();
             return {
                 jersey: cleanNum,
@@ -614,7 +692,8 @@
                 goals: st.goals,
                 assists: st.assists,
                 pim: st.pim,
-                shots: st.shots
+                shots: st.shots,
+                plusMinus: st.plusMinus
             };
         });
 
