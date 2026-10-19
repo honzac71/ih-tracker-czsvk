@@ -35,6 +35,7 @@
         }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
         label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
         
@@ -93,16 +94,18 @@
 
     <!-- 2. Forward Lines & Defense Pairs -->
     <div class="card">
-        <h2>2. Even Strength Lines & Shortcuts</h2>
+        <h2>2. Even Strength Lines & Shortcuts (F1 - F5, F11)</h2>
         <div id="forwardLinesContainer"></div>
         <div id="defensePairsContainer" style="margin-top: 20px;"></div>
+        <div id="fourVFourContainer" style="margin-top: 20px;"></div>
     </div>
 
     <!-- 3. Special Teams -->
     <div class="card">
-        <h2>3. Special Teams Units & Shortcuts</h2>
+        <h2>3. Special Teams Units & Shortcuts (F6 - F10)</h2>
         <div id="ppContainer"></div>
         <div id="pkContainer" style="margin-top: 20px;"></div>
+        <div id="pk3Container" style="margin-top: 20px;"></div>
     </div>
 
     <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts ➔ Proceed to Live Tracker</button>
@@ -148,7 +151,9 @@
             'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
             'd1': 'F4', 'd2': 'F5',
             'PP1': 'F6', 'PP2': 'F7',
-            'PK1': 'F8', 'PK2': 'F9'
+            'PK1': 'F8', 'PK2': 'F9',
+            'PK3': 'F10',
+            '4v4': 'F11'
         };
         let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
         let savedLines = matchSetup.lines || {};
@@ -163,8 +168,9 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             roster.forEach((p, idx) => {
+                let cleanNum = String(p.number || '').replace('#', '').trim();
                 tbody.innerHTML += `<tr>
-                    <td><strong>#${p.number}</strong></td>
+                    <td><strong>${cleanNum}</strong></td>
                     <td>${p.firstName} ${p.surname}${p.nickname ? ' ('+p.nickname+')' : ''}</td>
                     <td>${p.position}</td>
                     <td style="text-align: center;">
@@ -183,13 +189,14 @@
             let options = `<option value="">-- Select Player --</option>`;
             roster.forEach(p => {
                 let isSelected = String(selectedVal) === String(p.id) ? 'selected' : '';
-                options += `<option value="${p.id}" ${isSelected}>#${p.number} ${p.surname} (${p.position})</option>`;
+                let cleanNum = String(p.number || '').replace('#', '').trim();
+                options += `<option value="${p.id}" ${isSelected}>${cleanNum} - ${p.surname} (${p.position})</option>`;
             });
             return `<select id="line_${slotKey}">${options}</select>`;
         }
 
         function renderLineBuilders() {
-            // Forward Lines
+            // Forward Lines (F1 - F3)
             let fContainer = document.getElementById('forwardLinesContainer');
             if (fContainer) {
                 let html = '<h3>Forward Lines (LW - C - RW)</h3>';
@@ -215,7 +222,7 @@
                 fContainer.innerHTML = html;
             }
 
-            // Defense Pairs
+            // Defense Pairs (D1 - D2)
             let dContainer = document.getElementById('defensePairsContainer');
             if (dContainer) {
                 let html = '<h3>Defense Pairs (LD - RD)</h3>';
@@ -240,7 +247,30 @@
                 dContainer.innerHTML = html;
             }
 
-            // Power Play Units
+            // 4v4 Formation (F11)
+            let v4Container = document.getElementById('fourVFourContainer');
+            if (v4Container) {
+                let currentKey = lineShortcuts['4v4'] || 'F11';
+                v4Container.innerHTML = `
+                    <h3>4v4 Formation (2 Forwards - 2 Defense)</h3>
+                    <div class="line-row">
+                        <div class="line-header">
+                            <span class="line-title">4v4 Unit</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="margin:0;">Line Hotkey:</label>
+                                <input type="text" maxlength="4" class="shortcut-input" id="key_4v4" value="${currentKey}">
+                            </div>
+                        </div>
+                        <div class="grid-4">
+                            <div><label>F1</label>${createPlayerSelect('4v4_f1')}</div>
+                            <div><label>F2</label>${createPlayerSelect('4v4_f2')}</div>
+                            <div><label>D1</label>${createPlayerSelect('4v4_d1')}</div>
+                            <div><label>D2</label>${createPlayerSelect('4v4_d2')}</div>
+                        </div>
+                    </div>`;
+            }
+
+            // Power Play Units (PP1 - PP2)
             let ppContainer = document.getElementById('ppContainer');
             if (ppContainer) {
                 let html = '<h3>Power Play Units (LW - C - RW - LD - RD)</h3>';
@@ -268,7 +298,7 @@
                 ppContainer.innerHTML = html;
             }
 
-            // Penalty Kill Units
+            // Penalty Kill Units (PK1 - PK2)
             let pkContainer = document.getElementById('pkContainer');
             if (pkContainer) {
                 let html = '<h3>Penalty Kill Units (F1 - F2 - D1 - D2)</h3>';
@@ -284,7 +314,7 @@
                                     <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
                                 </div>
                             </div>
-                            <div class="grid-5">
+                            <div class="grid-4">
                                 <div><label>F1</label>${createPlayerSelect(`${lineId.toLowerCase()}_f1`)}</div>
                                 <div><label>F2</label>${createPlayerSelect(`${lineId.toLowerCase()}_f2`)}</div>
                                 <div><label>D1</label>${createPlayerSelect(`${lineId.toLowerCase()}_d1`)}</div>
@@ -294,6 +324,28 @@
                 }
                 pkContainer.innerHTML = html;
             }
+
+            // 3-Man Penalty Kill Unit (PK3 - F10)
+            let pk3Container = document.getElementById('pk3Container');
+            if (pk3Container) {
+                let currentKey = lineShortcuts['PK3'] || 'F10';
+                pk3Container.innerHTML = `
+                    <h3>3-Man Penalty Kill Unit (PK3 - 1 Forward, 2 Defense)</h3>
+                    <div class="line-row">
+                        <div class="line-header">
+                            <span class="line-title">PK3 Unit</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="margin:0;">Line Hotkey:</label>
+                                <input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${currentKey}">
+                            </div>
+                        </div>
+                        <div class="grid-3">
+                            <div><label>F</label>${createPlayerSelect('pk3_f')}</div>
+                            <div><label>D1</label>${createPlayerSelect('pk3_d1')}</div>
+                            <div><label>D2</label>${createPlayerSelect('pk3_d2')}</div>
+                        </div>
+                    </div>`;
+            }
         }
 
         window.saveLinesAndProceed = function() {
@@ -302,17 +354,19 @@
 
             let allSlots = ['f1_lw','f1_c','f1_rw','f2_lw','f2_c','f2_rw','f3_lw','f3_c','f3_rw',
                             'd1_ld','d1_rd','d2_ld','d2_rd',
+                            '4v4_f1','4v4_f2','4v4_d1','4v4_d2',
                             'pp1_lw','pp1_c','pp1_rw','pp1_ld','pp1_rd',
                             'pp2_lw','pp2_c','pp2_rw','pp2_ld','pp2_rd',
                             'pk1_f1','pk1_f2','pk1_d1','pk1_d2',
-                            'pk2_f1','pk2_f2','pk2_d1','pk2_d2'];
+                            'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
+                            'pk3_f','pk3_d1','pk3_d2'];
 
             allSlots.forEach(slot => {
                 let el = document.getElementById(`line_${slot}`);
                 if (el) lines[slot] = el.value;
             });
 
-            let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2'];
+            let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2','PK3','4v4'];
             allLineKeys.forEach(lKey => {
                 let el = document.getElementById(`key_${lKey}`);
                 if (el) shortcuts[lKey] = el.value.toUpperCase().trim();
