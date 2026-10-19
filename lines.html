@@ -73,7 +73,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and entire line combinations, then sync everything to your Google Sheet.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations, then sync everything to your Google Sheet.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
@@ -124,7 +124,6 @@
         matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
         roster = matchSetup.roster || [];
         
-        // Fallback to master roster if matchSetup roster is empty
         if (roster.length === 0) {
             let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
             if (master.length > 0) {
@@ -137,8 +136,8 @@
     }
 
     if (roster.length === 0) {
-        document.body.innerHTML = `
-            <div style="text-align: center; margin-top: 50px; color: #f8fafc; font-family: Arial;">
+        document.getElementById('appContainer').innerHTML = `
+            <div style="text-align: center; margin-top: 50px; color: #f8fafc;">
                 <h2 style="color: #ef4444;">No Roster Data Found</h2>
                 <p style="color: #94a3b8;">Please go back to Step 1, select your active players, and click 'Save Match Setup'.</p>
                 <a href="index.html" style="display: inline-block; background-color: #0284c7; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 15px;">Go to Step 1 (Index)</a>
@@ -187,7 +186,6 @@
         };
 
         function renderLineBuilders() {
-            // Forward Lines (3 lines: LW, C, RW)
             let fContainer = document.getElementById('forwardLinesContainer');
             if (fContainer) {
                 fContainer.innerHTML = '';
@@ -212,7 +210,6 @@
                 }
             }
 
-            // Defense Pairs (2 pairs: D, D)
             let dContainer = document.getElementById('defensePairsContainer');
             if (dContainer) {
                 dContainer.innerHTML = '';
@@ -236,7 +233,6 @@
                 }
             }
 
-            // Special Teams PP & PK
             let ppDiv = document.getElementById('ppContainer');
             if (ppDiv) {
                 ppDiv.innerHTML = '';
@@ -326,13 +322,12 @@
             localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
 
             try {
-                fetch(matchSetup.scriptUrl, {
+                await fetch(matchSetup.scriptUrl, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify(matchSetup)
-                }).catch(() => {});
-
+                });
                 alert('Lines and shortcuts saved successfully! Data transmitted to Google Sheets.');
             } catch (err) {
                 console.error('Sync error:', err);
