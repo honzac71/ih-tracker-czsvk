@@ -11,8 +11,10 @@
         h1, h2 { color: #38bdf8; margin-top: 0; }
         .line-group { margin-bottom: 20px; padding: 15px; background: #0f172a; border-radius: 6px; border: 1px solid #334155; }
         select { background: #1e293b; color: white; padding: 6px; border-radius: 4px; border: 1px solid #334155; margin-right: 10px; }
-        .btn { background-color: #0284c7; color: white; border: none; padding: 10px 20px; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn:hover { background-color: #0284c7; }
+        select.error-highlight { border: 2px solid #ef4444; }
+        .btn { background-color: #0284c7; color: white; border: none; padding: 12px 24px; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background-color: #0369a1; }
+        .error-msg { color: #ef4444; font-size: 0.85rem; font-weight: bold; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -21,7 +23,8 @@
     <h1>Match Lineups & Special Teams Setup</h1>
 
     <div class="card">
-        <h2>Configure Lines & Special Teams</h2>
+        <h2>Configure All Lines & Special Teams (Required)</h2>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Every player slot across all lines, special teams, and 4v4 must be selected before proceeding.</p>
         <div id="linesContainer"></div>
         <button class="btn" onclick="saveLinesAndProceed()">Save Lineup & Go to Live Game</button>
     </div>
@@ -31,7 +34,6 @@
     let matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
     let roster = matchSetup.roster || JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
 
-    // Define line structures: Standard lines have 3 F / 2 D, Special teams & 4v4 configured below
     let lineConfigs = [
         { key: 'f1', name: 'Forward Line 1 (F1)', type: 'F', count: 3 },
         { key: 'f2', name: 'Forward Line 2 (F2)', type: 'F', count: 3 },
@@ -51,23 +53,22 @@
         container.innerHTML = '';
 
         lineConfigs.forEach(cfg => {
-            let html = `<div class="line-group"><h3>${cfg.name}</h3><div style="display: flex; gap: 10px; flex-wrap: wrap;">`;
+            let html = `<div class="line-group" id="group_${cfg.key}">
+                <h3>${cfg.name}</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">`;
             
             if (cfg.type === 'F' || cfg.type === 'D') {
                 for (let i = 1; i <= cfg.count; i++) {
                     html += buildSelect(`${cfg.key}_${i}`, `${cfg.type.toUpperCase()} ${i}`);
                 }
             } else if (cfg.type === '4v4') {
-                // 4v4 uses 2 Forwards and 2 Defense
                 html += buildSelect(`${cfg.key}_f1`, 'FWD 1');
                 html += buildSelect(`${cfg.key}_f2`, 'FWD 2');
                 html += buildSelect(`${cfg.key}_d1`, 'DEF 1');
                 html += buildSelect(`${cfg.key}_d2`, 'DEF 2');
             } else {
-                // Special Teams PP1, PP2, PK1, PK2, PK3 use 3 Forwards and 2 Defense (or 2F/2D for PK if preferred, standard 3F/2D for PP)
                 let fCount = (cfg.type === 'PP') ? 3 : 2;
                 let dCount = (cfg.type === 'PP') ? 2 : 2;
-                
                 for (let i = 1; i <= fCount; i++) {
                     html += buildSelect(`${cfg.key}_f${i}`, `FWD ${i}`);
                 }
@@ -76,11 +77,10 @@
                 }
             }
 
-            html += `</div></div>`;
+            html += `</div><div class="error-msg" id="err_${cfg.key}">Please fill out all player slots for this line.</div></div>`;
             container.innerHTML += html;
         });
 
-        // Pre-populate if saved before
         if (matchSetup.lines) {
             Object.keys(matchSetup.lines).forEach(slotKey => {
                 let el = document.getElementById(slotKey);
@@ -95,35 +95,53 @@
             let num = String(p.number || '').replace('#', '').trim();
             options += `<option value="${p.id}">#${num} ${p.surname} (${p.position})</option>`;
         });
-        return `<div><label style="font-size:0.8rem; color:#94a3b8; display:block;">${label}</label><select id="${slotId}">${options}</select></div>`;
+        return `<div><label style="font-size:0.8rem; color:#94a3b8; display:block;">${label}</label><select id="${slotId}" class="line-select">${options}</select></div>`;
     }
 
     function saveLinesAndProceed() {
         let linesData = {};
+        let isValid = true;
+
         lineConfigs.forEach(cfg => {
+            let groupValid = true;
+            let currentGroupSlots = [];
+
             if (cfg.type === 'F' || cfg.type === 'D') {
                 for (let i = 1; i <= cfg.count; i++) {
-                    let id = document.getElementById(`${cfg.key}_${i}`).value;
-                    if (id) linesData[`${cfg.key}_${i}`] = id;
+                    currentGroupSlots.push(`${cfg.key}_${i}`);
                 }
             } else if (cfg.type === '4v4') {
-                ['f1', 'f2', 'd1', 'd2'].forEach(pos => {
-                    let id = document.getElementById(`${cfg.key}_${pos}`).value;
-                    if (id) linesData[`${cfg.key}_${pos}`] = id;
-                });
+                currentGroupSlots = [`${cfg.key}_f1`, `${cfg.key}_f2`, `${cfg.key}_d1`, `${cfg.key}_d2`];
             } else {
                 let fCount = (cfg.type === 'PP') ? 3 : 2;
                 let dCount = (cfg.type === 'PP') ? 2 : 2;
-                for (let i = 1; i <= fCount; i++) {
-                    let id = document.getElementById(`${cfg.key}_f${i}`).value;
-                    if (id) linesData[`${cfg.key}_f${i}`] = id;
+                for (let i = 1; i <= fCount; i++) currentGroupSlots.push(`${cfg.key}_f${i}`);
+                for (let i = 1; i <= dCount; i++) currentGroupSlots.push(`${cfg.key}_d${i}`);
+            }
+
+            currentGroupSlots.forEach(slotId => {
+                let el = document.getElementById(slotId);
+                let val = el ? el.value : '';
+                if (!val) {
+                    groupValid = false;
+                    isValid = false;
+                    if (el) el.classList.add('error-highlight');
+                } else {
+                    if (el) el.classList.remove('error-highlight');
+                    linesData[slotId] = val;
                 }
-                for (let i = 1; i <= dCount; i++) {
-                    let id = document.getElementById(`${cfg.key}_d${i}`).value;
-                    if (id) linesData[`${cfg.key}_d${i}`] = id;
-                }
+            });
+
+            let errEl = document.getElementById(`err_${cfg.key}`);
+            if (errEl) {
+                errEl.style.display = groupValid ? 'none' : 'block';
             }
         });
+
+        if (!isValid) {
+            alert('Incomplete Lineup! You must assign a player to every single slot across all lines, special teams, and 4v4 before proceeding to the game.');
+            return;
+        }
 
         matchSetup.lines = linesData;
         matchSetup.lineShortcuts = {
