@@ -33,6 +33,7 @@
             box-sizing: border-box;
             width: 100%;
         }
+        select.error-highlight { border: 2px solid #ef4444; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
         .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
@@ -74,7 +75,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F9 pre-assigned), then sync everything to your Google Sheet.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F11 pre-assigned). All slots must be filled before proceeding.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
@@ -99,6 +100,7 @@
         <h2>2. Even Strength Lines & Shortcuts</h2>
         <div id="forwardLinesContainer"></div>
         <div id="defensePairsContainer" style="margin-top: 20px;"></div>
+        <div id="formation4v4Container" style="margin-top: 20px;"></div>
     </div>
 
     <!-- Special Teams -->
@@ -149,6 +151,7 @@
     let defaultLineKeys = {
         'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
         'd1': 'F4', 'd2': 'F5',
+        '4v4': 'F11',
         'PP1': 'F6', 'PP2': 'F7',
         'PK1': 'F8', 'PK2': 'F9'
     };
@@ -236,6 +239,30 @@
             dContainer.innerHTML = html;
         }
 
+        // 4v4 Formation
+        let v4Container = document.getElementById('formation4v4Container');
+        if (v4Container) {
+            let lineId = '4v4';
+            let currentKey = lineShortcuts[lineId] || 'F11';
+            v4Container.innerHTML = `
+                <h3>4v4 Formation (2F - 2D)</h3>
+                <div class="line-row">
+                    <div class="line-header">
+                        <span class="line-title">4v4 Formation</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="margin:0;">Line Hotkey:</label>
+                            <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                        </div>
+                    </div>
+                    <div class="grid-4">
+                        <div><label>Forward 1</label>${createPlayerSelect(`${lineId}_f1`)}</div>
+                        <div><label>Forward 2</label>${createPlayerSelect(`${lineId}_f2`)}</div>
+                        <div><label>Defense Left</label>${createPlayerSelect(`${lineId}_ld`)}</div>
+                        <div><label>Defense Right</label>${createPlayerSelect(`${lineId}_rd`)}</div>
+                    </div>
+                </div>`;
+        }
+
         // Special Teams PP (5 players)
         let ppDiv = document.getElementById('ppContainer');
         if (ppDiv) {
@@ -319,14 +346,26 @@
         let linesData = {};
         let readableLines = {};
         let selects = document.querySelectorAll('select');
+        let isValid = true;
         
         selects.forEach(sel => {
-            linesData[sel.id] = sel.value;
-            readableLines[sel.id] = getPlayerReadable(sel.value);
+            sel.classList.remove('error-highlight');
+            if (!sel.value) {
+                isValid = false;
+                sel.classList.add('error-highlight');
+            } else {
+                linesData[sel.id] = sel.value;
+                readableLines[sel.id] = getPlayerReadable(sel.value);
+            }
         });
 
+        if (!isValid) {
+            alert('Incomplete Lineup! You must assign a player to every single player slot across all lines, 4v4, and special teams before proceeding.');
+            return;
+        }
+
         let updatedLineShortcuts = {};
-        ['f1', 'f2', 'f3', 'd1', 'd2', 'PP1', 'PP2', 'PK1', 'PK2'].forEach(id => {
+        ['f1', 'f2', 'f3', 'd1', 'd2', '4v4', 'PP1', 'PP2', 'PK1', 'PK2'].forEach(id => {
             let inputEl = document.getElementById(`key_${id}`);
             if (inputEl) {
                 updatedLineShortcuts[id] = inputEl.value.trim().toUpperCase();
