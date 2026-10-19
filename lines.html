@@ -3,131 +3,331 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ice Hockey Match Tracker - Step 2: Line Setup</title>
+    <title>Ice Hockey Match Tracker - Step 2: Lines & Shortcuts Setup</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        h1, h2 { color: #38bdf8; margin-top: 0; }
-        .grid-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .line-box { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; }
-        label { display: block; margin-top: 8px; font-size: 0.85rem; color: #94a3b8; }
-        select, input { width: 100%; padding: 8px; margin-top: 4px; background: #1e293b; border: 1px solid #334155; border-radius: 4px; color: white; box-sizing: border-box; }
-        .btn { background-color: #0284c7; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; font-size: 1rem; }
-        .btn:hover { background-color: #0369a1; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: #38bdf8; }
+        select, input {
+            padding: 8px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; }
+        .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 5px; }
+        label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.95rem; }
+        th { background-color: #0f172a; color: #94a3b8; }
+        
+        .shortcut-input {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #38bdf8;
+            background-color: #0f172a;
+            border: 1px solid #0284c7;
+        }
+        .line-row {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        .line-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .line-title { color: #38bdf8; font-weight: bold; font-size: 1rem; }
+        .btn-success { background-color: #10b981; color: white; border: none; padding: 14px; font-size: 1.1rem; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .btn-success:hover { background-color: #059669; }
+        .section-desc { color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Line Combinations & Shortcuts</h1>
+<div class="container" id="appContainer">
+    <h1>Ice Hockey Line & Shortcut Configuration</h1>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations, then save to proceed to the Live Tracker.</p>
 
+    <!-- 1. Player Shortcuts Management Card -->
     <div class="card">
-        <h2>Keyboard Shortcuts for Lines</h2>
-        <div class="grid-lines" id="shortcutsConfigContainer"></div>
+        <h2>1. Player Shortcuts (Hotkeys)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Jersey</th>
+                    <th>Player Name</th>
+                    <th>Position</th>
+                    <th style="width: 120px; text-align: center;">Hotkey</th>
+                </tr>
+            </thead>
+            <tbody id="playerShortcutsBody"></tbody>
+        </table>
     </div>
 
+    <!-- 2. Forward Lines & Defense Pairs -->
     <div class="card">
-        <h2>Line Rosters</h2>
-        <div class="grid-lines" id="linesConfigContainer"></div>
+        <h2>2. Even Strength Lines & Shortcuts</h2>
+        <div id="forwardLinesContainer"></div>
+        <div id="defensePairsContainer" style="margin-top: 20px;"></div>
     </div>
 
-    <button class="btn" onclick="saveLinesAndProceed()">Save & Open Live Game Tracker ➔</button>
+    <!-- 3. Special Teams -->
+    <div class="card">
+        <h2>3. Special Teams Units & Shortcuts</h2>
+        <div id="ppContainer"></div>
+        <div id="pkContainer" style="margin-top: 20px;"></div>
+    </div>
+
+    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts ➔ Proceed to Live Tracker</button>
 </div>
 
 <script>
-    let matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || { roster: [] };
-    let roster = matchSetup.roster;
+    let roster = [];
+    let matchSetup = {};
 
-    let lineConfigs = [
-        { key: 'f1', name: 'Forward Line 1', slots: ['LW', 'C', 'RW'] },
-        { key: 'f2', name: 'Forward Line 2', slots: ['LW', 'C', 'RW'] },
-        { key: 'f3', name: 'Forward Line 3', slots: ['LW', 'C', 'RW'] },
-        { key: 'd1', name: 'Defense Pair 1', slots: ['LD', 'RD'] },
-        { key: 'd2', name: 'Defense Pair 2', slots: ['LD', 'RD'] },
-        { key: '4v4', name: '4v4 Combo', slots: ['LW', 'RW', 'LD', 'RD'] },
-        { key: 'PP1', name: 'Power Play 1', slots: ['LW', 'C', 'RW', 'LD', 'RD'] },
-        { key: 'PP2', name: 'Power Play 2', slots: ['LW', 'C', 'RW', 'LD', 'RD'] },
-        { key: 'PK1', name: 'Penalty Kill 1', slots: ['F1', 'F2', 'D1', 'D2'] },
-        { key: 'PK2', name: 'Penalty Kill 2', slots: ['F1', 'F2', 'D1', 'D2'] },
-        { key: 'PK3', name: 'Penalty Kill 3', slots: ['F1', 'F2', 'D1', 'D2'] }
-    ];
-
-    let defaultShortcuts = {
-        'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
-        'd1': 'F4', 'd2': 'F5',
-        '4v4': 'F11',
-        'PP1': 'F6', 'PP2': 'F7',
-        'PK1': 'F8', 'PK2': 'F9', 'PK3': 'F10'
-    };
-
-    function renderSetup() {
-        let savedShortcuts = matchSetup.lineShortcuts || defaultShortcuts;
-        let scContainer = document.getElementById('shortcutsConfigContainer');
-        scContainer.innerHTML = '';
+    try {
+        matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+        roster = matchSetup.roster || [];
         
-        lineConfigs.forEach(lc => {
-            let val = savedShortcuts[lc.key] || '';
-            scContainer.innerHTML += `
-                <div>
-                    <label>${lc.name} Shortcut Key:</label>
-                    <input type="text" id="sc_${lc.key}" value="${val}" style="text-transform:uppercase;">
-                </div>
-            `;
+        if (roster.length === 0) {
+            let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
+            if (master.length > 0) {
+                roster = master;
+                matchSetup.roster = roster;
+            }
+        }
+    } catch (e) {
+        console.error("Storage load error:", e);
+    }
+
+    if (roster.length === 0) {
+        document.getElementById('appContainer').innerHTML = `
+            <div style="text-align: center; margin-top: 50px; color: #f8fafc;">
+                <h2 style="color: #ef4444;">No Roster Data Found</h2>
+                <p style="color: #94a3b8;">Please go back to Step 1, select your active players, and click 'Save Match Setup'.</p>
+                <a href="index.html" style="display: inline-block; background-color: #0284c7; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 15px;">Go to Step 1 (Index)</a>
+            </div>`;
+    } else {
+        const defaultKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+                             '1','2','3','4','5','6','7','8','9','0'];
+
+        roster.forEach((p, idx) => {
+            if (!p.hotkey) {
+                p.hotkey = defaultKeys[idx % defaultKeys.length];
+            }
         });
 
+        let defaultLineKeys = {
+            'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
+            'd1': 'F4', 'd2': 'F5',
+            'PP1': 'F6', 'PP2': 'F7',
+            'PK1': 'F8', 'PK2': 'F9'
+        };
+        let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
         let savedLines = matchSetup.lines || {};
-        let lContainer = document.getElementById('linesConfigContainer');
-        lContainer.innerHTML = '';
 
-        lineConfigs.forEach(lc => {
-            let slotsHtml = '';
-            lc.slots.forEach(slot => {
-                let slotKey = `${lc.key}_${slot}`.toLowerCase();
-                let selectedId = savedLines[slotKey] || '';
-                
-                let options = `<option value="">-- Select Player --</option>`;
-                roster.forEach(p => {
-                    options += `<option value="${p.id}" ${selectedId == p.id ? 'selected' : ''}>#${p.number} ${p.surname} (${p.position})</option>`;
-                });
+        function initPage() {
+            renderPlayerShortcutsTable();
+            renderLineBuilders();
+        }
 
-                slotsHtml += `
-                    <label>${slot}:</label>
-                    <select id="line_${slotKey}">${options}</select>
-                `;
+        function renderPlayerShortcutsTable() {
+            let tbody = document.getElementById('playerShortcutsBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            roster.forEach((p, idx) => {
+                tbody.innerHTML += `<tr>
+                    <td><strong>#${p.number}</strong></td>
+                    <td>${p.firstName} ${p.surname}${p.nickname ? ' ('+p.nickname+')' : ''}</td>
+                    <td>${p.position}</td>
+                    <td style="text-align: center;">
+                        <input type="text" maxlength="2" class="shortcut-input" id="p-key-${idx}" value="${p.hotkey}" onchange="updatePlayerHotkey(${idx}, this.value)">
+                    </td>
+                </tr>`;
+            });
+        }
+
+        window.updatePlayerHotkey = function(idx, val) {
+            roster[idx].hotkey = val.toUpperCase();
+        };
+
+        function createPlayerSelect(slotKey) {
+            let selectedVal = savedLines[slotKey] || '';
+            let options = `<option value="">-- Select Player --</option>`;
+            roster.forEach(p => {
+                let isSelected = String(selectedVal) === String(p.id) ? 'selected' : '';
+                options += `<option value="${p.id}" ${isSelected}>#${p.number} ${p.surname} (${p.position})</option>`;
+            });
+            return `<select id="line_${slotKey}">${options}</select>`;
+        }
+
+        function renderLineBuilders() {
+            // Forward Lines
+            let fContainer = document.getElementById('forwardLinesContainer');
+            if (fContainer) {
+                let html = '<h3>Forward Lines (LW - C - RW)</h3>';
+                for (let i = 1; i <= 3; i++) {
+                    let lineId = `f${i}`;
+                    let currentKey = lineShortcuts[lineId] || `F${i}`;
+                    html += `
+                        <div class="line-row">
+                            <div class="line-header">
+                                <span class="line-title">Forward Line ${i}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="margin:0;">Line Hotkey:</label>
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                </div>
+                            </div>
+                            <div class="grid-3">
+                                <div><label>LW</label>${createPlayerSelect(`${lineId}_lw`)}</div>
+                                <div><label>C</label>${createPlayerSelect(`${lineId}_c`)}</div>
+                                <div><label>RW</label>${createPlayerSelect(`${lineId}_rw`)}</div>
+                            </div>
+                        </div>`;
+                }
+                fContainer.innerHTML = html;
+            }
+
+            // Defense Pairs
+            let dContainer = document.getElementById('defensePairsContainer');
+            if (dContainer) {
+                let html = '<h3>Defense Pairs (LD - RD)</h3>';
+                for (let i = 1; i <= 2; i++) {
+                    let lineId = `d${i}`;
+                    let currentKey = lineShortcuts[lineId] || `F${i+3}`;
+                    html += `
+                        <div class="line-row">
+                            <div class="line-header">
+                                <span class="line-title">Defense Pair ${i}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="margin:0;">Line Hotkey:</label>
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                </div>
+                            </div>
+                            <div class="grid-2">
+                                <div><label>LD</label>${createPlayerSelect(`${lineId}_ld`)}</div>
+                                <div><label>RD</label>${createPlayerSelect(`${lineId}_rd`)}</div>
+                            </div>
+                        </div>`;
+                }
+                dContainer.innerHTML = html;
+            }
+
+            // Power Play Units
+            let ppContainer = document.getElementById('ppContainer');
+            if (ppContainer) {
+                let html = '<h3>Power Play Units (LW - C - RW - LD - RD)</h3>';
+                for (let i = 1; i <= 2; i++) {
+                    let lineId = `PP${i}`;
+                    let currentKey = lineShortcuts[lineId] || `F${i+5}`;
+                    html += `
+                        <div class="line-row">
+                            <div class="line-header">
+                                <span class="line-title">Power Play ${i}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="margin:0;">Line Hotkey:</label>
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                </div>
+                            </div>
+                            <div class="grid-5">
+                                <div><label>LW</label>${createPlayerSelect(`${lineId.toLowerCase()}_lw`)}</div>
+                                <div><label>C</label>${createPlayerSelect(`${lineId.toLowerCase()}_c`)}</div>
+                                <div><label>RW</label>${createPlayerSelect(`${lineId.toLowerCase()}_rw`)}</div>
+                                <div><label>LD</label>${createPlayerSelect(`${lineId.toLowerCase()}_ld`)}</div>
+                                <div><label>RD</label>${createPlayerSelect(`${lineId.toLowerCase()}_rd`)}</div>
+                            </div>
+                        </div>`;
+                }
+                ppContainer.innerHTML = html;
+            }
+
+            // Penalty Kill Units
+            let pkContainer = document.getElementById('pkContainer');
+            if (pkContainer) {
+                let html = '<h3>Penalty Kill Units (F1 - F2 - D1 - D2)</h3>';
+                for (let i = 1; i <= 2; i++) {
+                    let lineId = `PK${i}`;
+                    let currentKey = lineShortcuts[lineId] || `F${i+7}`;
+                    html += `
+                        <div class="line-row">
+                            <div class="line-header">
+                                <span class="line-title">Penalty Kill ${i}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="margin:0;">Line Hotkey:</label>
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                </div>
+                            </div>
+                            <div class="grid-5">
+                                <div><label>F1</label>${createPlayerSelect(`${lineId.toLowerCase()}_f1`)}</div>
+                                <div><label>F2</label>${createPlayerSelect(`${lineId.toLowerCase()}_f2`)}</div>
+                                <div><label>D1</label>${createPlayerSelect(`${lineId.toLowerCase()}_d1`)}</div>
+                                <div><label>D2</label>${createPlayerSelect(`${lineId.toLowerCase()}_d2`)}</div>
+                            </div>
+                        </div>`;
+                }
+                pkContainer.innerHTML = html;
+            }
+        }
+
+        window.saveLinesAndProceed = function() {
+            let lines = {};
+            let shortcuts = {};
+
+            let allSlots = ['f1_lw','f1_c','f1_rw','f2_lw','f2_c','f2_rw','f3_lw','f3_c','f3_rw',
+                            'd1_ld','d1_rd','d2_ld','d2_rd',
+                            'pp1_lw','pp1_c','pp1_rw','pp1_ld','pp1_rd',
+                            'pp2_lw','pp2_c','pp2_rw','pp2_ld','pp2_rd',
+                            'pk1_f1','pk1_f2','pk1_d1','pk1_d2',
+                            'pk2_f1','pk2_f2','pk2_d1','pk2_d2'];
+
+            allSlots.forEach(slot => {
+                let el = document.getElementById(`line_${slot}`);
+                if (el) lines[slot] = el.value;
             });
 
-            lContainer.innerHTML += `
-                <div class="line-box">
-                    <h3>${lc.name}</h3>
-                    ${slotsHtml}
-                </div>
-            `;
-        });
-    }
-
-    function saveLinesAndProceed() {
-        let shortcuts = {};
-        lineConfigs.forEach(lc => {
-            shortcuts[lc.key] = document.getElementById(`sc_${lc.key}`).value.toUpperCase().trim();
-        });
-
-        let lines = {};
-        lineConfigs.forEach(lc => {
-            lc.slots.forEach(slot => {
-                let slotKey = `${lc.key}_${slot}`.toLowerCase();
-                lines[slotKey] = document.getElementById(`line_${slotKey}`).value;
+            let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2'];
+            allLineKeys.forEach(lKey => {
+                let el = document.getElementById(`key_${lKey}`);
+                if (el) shortcuts[lKey] = el.value.toUpperCase().trim();
             });
-        });
 
-        matchSetup.lineShortcuts = shortcuts;
-        matchSetup.lines = lines;
+            matchSetup.roster = roster;
+            matchSetup.lines = lines;
+            matchSetup.lineShortcuts = shortcuts;
 
-        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
-        window.location.href = 'game.html';
+            localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
+            window.location.href = 'game.html';
+        };
+
+        window.onload = initPage;
     }
-
-    window.onload = renderSetup;
 </script>
 
 </body>
