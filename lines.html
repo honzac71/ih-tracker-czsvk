@@ -92,7 +92,7 @@
         </table>
     </div>
 
-    <!-- 2. Forward Lines & Defense Pairs -->
+    <!-- 2. Even Strength Lines & Shortcuts -->
     <div class="card">
         <h2>2. Even Strength Lines & Shortcuts (F1 - F5, F11)</h2>
         <div id="forwardLinesContainer"></div>
@@ -158,6 +158,11 @@
         let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
         let savedLines = matchSetup.lines || {};
 
+        function cleanNumber(numStr) {
+            if (!numStr) return '';
+            return String(numStr).replace(/#/g, '').trim();
+        }
+
         function initPage() {
             renderPlayerShortcutsTable();
             renderLineBuilders();
@@ -168,7 +173,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             roster.forEach((p, idx) => {
-                let cleanNum = String(p.number || '').replace('#', '').trim();
+                let cleanNum = cleanNumber(p.number);
                 tbody.innerHTML += `<tr>
                     <td><strong>${cleanNum}</strong></td>
                     <td>${p.firstName} ${p.surname}${p.nickname ? ' ('+p.nickname+')' : ''}</td>
@@ -189,7 +194,7 @@
             let options = `<option value="">-- Select Player --</option>`;
             roster.forEach(p => {
                 let isSelected = String(selectedVal) === String(p.id) ? 'selected' : '';
-                let cleanNum = String(p.number || '').replace('#', '').trim();
+                let cleanNum = cleanNumber(p.number);
                 options += `<option value="${p.id}" ${isSelected}>${cleanNum} - ${p.surname} (${p.position})</option>`;
             });
             return `<select id="line_${slotKey}">${options}</select>`;
@@ -361,7 +366,7 @@
                             'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
                             'pk3_f','pk3_d1','pk3_d2'];
 
-            allSlots.forEach(slot => {
+            allSlots.apply = allSlots.forEach(slot => {
                 let el = document.getElementById(`line_${slot}`);
                 if (el) lines[slot] = el.value;
             });
