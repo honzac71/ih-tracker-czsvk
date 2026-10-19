@@ -56,8 +56,6 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
         th { background-color: #0f172a; color: #94a3b8; }
         .btn-success { background-color: #10b981; width: 100%; padding: 14px; font-size: 1.1rem; }
-        .btn-sheets { background-color: #10b981; padding: 10px 16px; height: 41px; }
-        .flex-row { display: flex; gap: 10px; align-items: flex-end; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
     </style>
@@ -66,21 +64,6 @@
 
 <div class="container">
     <h1>Ice Hockey Match & Roster Setup</h1>
-    
-    <!-- Google Sheets Integration Card -->
-    <div class="card" style="border-color: #10b981;">
-        <h2>Google Sheets Connection</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Paste your Google Apps Script Web App URL below to sync your roster from Google Drive and push match results later.</p>
-        <div class="flex-row">
-            <div style="flex: 4; margin-bottom: 0;">
-                <label>Google Apps Script Web App URL</label>
-                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
-            </div>
-            <div style="margin-bottom: 0;">
-                <button type="button" class="btn-sheets" onclick="fetchRosterFromSheets()">Fetch Roster from Sheets</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Match Details -->
     <div class="card">
@@ -148,7 +131,7 @@
     <!-- Match Roster Selection Card -->
     <div class="card">
         <h2>Select Today's Playing Roster</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Only players with <strong>Y</strong> in the 'current' column are shown below.</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded automatically from Google Sheets (Active players with 'Y').</p>
         
         <table id="gameRosterTable">
             <thead>
@@ -160,7 +143,7 @@
                 </tr>
             </thead>
             <tbody id="gameRosterBody">
-                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">No players loaded yet. Fetch from Google Sheets above.</td></tr>
+                <tr><td colspan="4" style="text-align: center; color: #94a3b8;">Connecting to Google Sheets...</td></tr>
             </tbody>
         </table>
     </div>
@@ -169,16 +152,17 @@
 </div>
 
 <script>
-    const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    // ==========================================
+    // BACKEND CONFIGURATION (HARDCODED URL)
+    // ==========================================
+    const SCRIPT_URL = 'YOUR_WEB_APP_URL_HERE'; // Replace with your Google Apps Script Web App URL
     
+    const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
     let masterRoster = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
 
     function initFormDefaults() {
         let today = new Date().toISOString().split('T')[0];
         document.getElementById('matchDate').value = today;
-
-        let savedUrl = localStorage.getItem('hockeyScriptUrl');
-        if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
 
         let lastSettings = JSON.parse(localStorage.getItem('hockeyLastMatchSettings'));
         if (lastSettings) {
@@ -200,7 +184,7 @@
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No active players found (check current column in Sheets).</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet "Players" tab.</td></tr>';
             return;
         }
 
@@ -215,29 +199,24 @@
         });
     }
 
-    async function fetchRosterFromSheets() {
-        let url = document.getElementById('scriptUrl').value.trim();
-        if (!url) {
-            alert('Please enter your Google Apps Script Web App URL.');
+    async function backgroundFetchRoster() {
+        if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_WEB_APP_URL_HERE')) {
+            // Fallback to local storage if URL isn't configured yet
+            renderGameRoster();
             return;
         }
-        localStorage.setItem('hockeyScriptUrl', url);
 
-        alert('Fetching roster from Google Sheets...');
         try {
-            let response = await fetch(url);
+            let response = await fetch(SCRIPT_URL);
             let result = await response.json();
             if (result.status === 'success' && result.players) {
                 masterRoster = result.players;
                 localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
                 renderGameRoster();
-                alert(`Successfully loaded ${masterRoster.length} total players from your Google Sheet!`);
-            } else {
-                alert('Error loading roster: ' + (result.message || 'Unknown error'));
             }
         } catch (err) {
-            alert('Failed to connect to Google Sheets. Make sure your Web App URL is correct and deployment access is set to "Anyone".');
-            console.error(err);
+            console.error('Background fetch failed, using cached roster:', err);
+            renderGameRoster(); // Fallback to cached local storage if offline
         }
     }
 
@@ -262,7 +241,7 @@
         }
 
         let matchSettings = {
-            scriptUrl: document.getElementById('scriptUrl').value.trim(),
+            scriptUrl: SCRIPT_URL,
             tournamentName: document.getElementById('tournamentName').value,
             homeTeam: document.getElementById('homeTeam').value,
             awayTeam: document.getElementById('awayTeam').value,
@@ -282,4 +261,11 @@
         alert('Match setup saved successfully! Ready to build Step 2.');
     }
 
-    window.
+    window.onload = () => {
+        initFormDefaults();
+        backgroundFetchRoster(); // Automatically fetches on page load in the background
+    };
+</script>
+
+</body>
+</html>
