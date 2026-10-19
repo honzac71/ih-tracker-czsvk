@@ -73,7 +73,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations, then sync everything to your Google Sheet.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F9 pre-assigned), then sync everything to your Google Sheet.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
@@ -144,11 +144,12 @@
             }
         });
 
+        // Pre-assigned F1 through F9 defaults
         let defaultLineKeys = {
             'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
-            'd1': 'D1', 'd2': 'D2',
-            'PP1': 'P1', 'PP2': 'P2',
-            'PK1': 'K1', 'PK2': 'K2'
+            'd1': 'F4', 'd2': 'F5',
+            'PP1': 'F6', 'PP2': 'F7',
+            'PK1': 'F8', 'PK2': 'F9'
         };
         let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
 
@@ -191,7 +192,7 @@
                                 <span class="line-title">Forward Line ${i}</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="3" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
                                 </div>
                             </div>
                             <div class="grid-3">
@@ -210,14 +211,14 @@
                 let html = '<h3>Defense Pairs (D - D)</h3>';
                 for (let i = 1; i <= 2; i++) {
                     let lineId = `d${i}`;
-                    let currentKey = lineShortcuts[lineId] || `D${i}`;
+                    let currentKey = lineShortcuts[lineId] || `F${i+3}`;
                     html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">Defense Pair ${i}</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="3" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
                                 </div>
                             </div>
                             <div class="grid-2">
@@ -233,15 +234,15 @@
             let ppDiv = document.getElementById('ppContainer');
             if (ppDiv) {
                 let html = '<h3>Power Play (PP1 & PP2)</h3>';
-                ['PP1', 'PP2'].forEach(unit => {
-                    let currentKey = lineShortcuts[unit] || unit;
+                ['PP1', 'PP2'].forEach((unit, idx) => {
+                    let currentKey = lineShortcuts[unit] || `F${idx+6}`;
                     html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">${unit} Unit</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="3" class="shortcut-input" id="key_${unit}" value="${currentKey}">
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
                                 </div>
                             </div>
                             <div class="grid-5">
@@ -260,15 +261,15 @@
             let pkDiv = document.getElementById('pkContainer');
             if (pkDiv) {
                 let html = '<h3>Penalty Kill (PK1 & PK2)</h3>';
-                ['PK1', 'PK2'].forEach(unit => {
-                    let currentKey = lineShortcuts[unit] || unit;
+                ['PK1', 'PK2'].forEach((unit, idx) => {
+                    let currentKey = lineShortcuts[unit] || `F${idx+8}`;
                     html += `
                         <div class="line-row">
                             <div class="line-header">
                                 <span class="line-title">${unit} Unit</span>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="3" class="shortcut-input" id="key_${unit}" value="${currentKey}">
+                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
                                 </div>
                             </div>
                             <div class="grid-5">
