@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -511,7 +510,6 @@
         tbody.innerHTML = '';
         let currentOnIce = getAllOnIceIds();
 
-        // Sort roster: Skaters first, Goaltenders (GK) sorted to the very last position
         let sortedRoster = [...roster].sort((a, b) => {
             let aIsGK = isGoalie(a) ? 1 : 0;
             let bIsGK = isGoalie(b) ? 1 : 0;
