@@ -74,7 +74,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations, then sync everything to your Google Sheet.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations (F1-F9 pre-assigned), then sync everything to your Google Sheet.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
@@ -119,7 +119,6 @@
         matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
         roster = matchSetup.roster || [];
         
-        // If matchSetup roster is missing, grab from master roster
         if (!roster || roster.length === 0) {
             let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
             if (master && master.length > 0) {
@@ -131,13 +130,9 @@
         console.error("Storage load error:", e);
     }
 
-    // Direct fallback if everything else is empty
     if (!roster || roster.length === 0) {
         roster = [
-            { id: "1", number: "55", firstName: "Richard", surname: "Tesarik", position: "F", hotkey: "A" },
-            { id: "2", number: "71", firstName: "Jan", surname: "Cernoch", position: "F", hotkey: "B" },
-            { id: "3", number: "3", firstName: "Ray", surname: "Khalil", position: "D", hotkey: "C" },
-            { id: "4", number: "5", firstName: "Slavo", surname: "Boris", position: "D", hotkey: "D" }
+            { id: "1", number: "55", firstName: "Test", surname: "Player", position: "F", hotkey: "A" }
         ];
         matchSetup.roster = roster;
     }
@@ -155,7 +150,7 @@
         'f1': 'F1', 'f2': 'F2', 'f3': 'F3',
         'd1': 'F4', 'd2': 'F5',
         'PP1': 'F6', 'PP2': 'F7',
-        'PK1': 'F8', 'PK2': 'F9', 'PK3': 'F10'
+        'PK1': 'F8', 'PK2': 'F9'
     };
     let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
 
@@ -268,17 +263,16 @@
             ppDiv.innerHTML = html;
         }
 
-        // Special Teams PK
+        // Special Teams PK (4 players: C, F, LD, RD)
         let pkDiv = document.getElementById('pkContainer');
         if (pkDiv) {
-            let html = '<h3>Penalty Kill Units (PK1/PK2: 4-man, PK3: 3-man C, LD, RD)</h3>';
-            
+            let html = '<h3>Penalty Kill (PK1 & PK2) - 4 Players (C, F, LD, RD)</h3>';
             ['PK1', 'PK2'].forEach((unit, idx) => {
                 let currentKey = lineShortcuts[unit] || `F${idx+8}`;
                 html += `
                     <div class="line-row">
                         <div class="line-header">
-                            <span class="line-title">${unit} Unit (4-man)</span>
+                            <span class="line-title">${unit} Unit</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <label style="margin:0;">Line Hotkey:</label>
                                 <input type="text" maxlength="4" class="shortcut-input" id="key_${unit}" value="${currentKey}">
@@ -292,24 +286,6 @@
                         </div>
                     </div>`;
             });
-
-            let pk3Key = lineShortcuts['PK3'] || 'F10';
-            html += `
-                <div class="line-row">
-                    <div class="line-header">
-                        <span class="line-title">PK3 Unit (3-man: C, LD, RD)</span>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <label style="margin:0;">Line Hotkey:</label>
-                            <input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${pk3Key}">
-                        </div>
-                    </div>
-                    <div class="grid-3">
-                        <div><label>C</label>${createPlayerSelect(`PK3_c`)}</div>
-                        <div><label>LD</label>${createPlayerSelect(`PK3_ld`)}</div>
-                        <div><label>RD</label>${createPlayerSelect(`PK3_rd`)}</div>
-                    </div>
-                </div>`;
-
             pkDiv.innerHTML = html;
         }
 
@@ -350,7 +326,7 @@
         });
 
         let updatedLineShortcuts = {};
-        ['f1', 'f2', 'f3', 'd1', 'd2', 'PP1', 'PP2', 'PK1', 'PK2', 'PK3'].forEach(id => {
+        ['f1', 'f2', 'f3', 'd1', 'd2', 'PP1', 'PP2', 'PK1', 'PK2'].forEach(id => {
             let inputEl = document.getElementById(`key_${id}`);
             if (inputEl) {
                 updatedLineShortcuts[id] = inputEl.value.trim().toUpperCase();
@@ -378,11 +354,7 @@
         window.location.href = 'game.html';
     };
 
-    // Use DOMContentLoaded to ensure elements are fully accessible
-    document.addEventListener('DOMContentLoaded', initPage);
-    if (document.readyState === "complete" || document.readyState === "interactive") {
-        initPage();
-    }
+    window.onload = initPage;
 </script>
 
 </body>
