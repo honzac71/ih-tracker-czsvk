@@ -3,326 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ice Hockey Match Tracker - Step 1: Setup & Master Roster</title>
+    <title>Ice Hockey Match Tracker - Step 1: Match Setup</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 950px;
-            margin: 0 auto;
-        }
-        .card {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        h1, h2 { color: #38bdf8; }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            background-color: #0f172a;
-            border: 1px solid #334155;
-            color: white;
-            border-radius: 4px;
-            box-sizing: border-box;
-            margin-top: 5px;
-            margin-bottom: 15px;
-        }
-        input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            accent-color: #0284c7;
-            cursor: pointer;
-            margin: 0;
-        }
-        button {
-            background-color: #0284c7;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover { background-color: #0369a1; }
+        body { font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        h1, h2 { color: #38bdf8; margin-top: 0; }
+        label { display: block; margin-top: 10px; font-size: 0.9rem; color: #94a3b8; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; color: white; box-sizing: border-box; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
         th { background-color: #0f172a; color: #94a3b8; }
-        .btn-success { background-color: #10b981; width: 100%; padding: 14px; font-size: 1.1rem; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        .tally-box {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-            background-color: #0f172a;
-            padding: 12px 15px;
-            border-radius: 6px;
-            border: 1px solid #334155;
-            font-size: 0.95rem;
-        }
-        .tally-item { color: #94a3b8; }
-        .tally-item span { color: #38bdf8; font-weight: bold; }
+        .btn { background-color: #0284c7; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn:hover { background-color: #0369a1; }
+        .btn-danger { background-color: #ef4444; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-success { background-color: #10b981; width: 100%; padding: 15px; font-size: 1rem; margin-top: 20px; }
+        .btn-success:hover { background-color: #059669; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Ice Hockey Match & Roster Setup</h1>
+    <h1>Ice Hockey Match Setup</h1>
 
-    <!-- Match Details -->
     <div class="card">
-        <h2>Match Details</h2>
-        
-        <div class="form-group">
-            <label>Tournament Name</label>
-            <input type="text" id="tournamentName" placeholder="e.g. La Coupe des Montagnes 2026">
-        </div>
+        <h2>1. Match Details</h2>
+        <label>Tournament / League Name:</label>
+        <input type="text" id="tournament" value="La Coupe des Montagnes 2026">
 
-        <div class="grid-2">
-            <div>
-                <label>Our Team (Home/Adjustable)</label>
-                <input type="text" id="homeTeam" value="Czechoslovakia">
-            </div>
-            <div>
-                <label>Opponent Team (Away)</label>
-                <input type="text" id="awayTeam" placeholder="e.g. Opponent">
-            </div>
-        </div>
+        <label>Opponent Team Name:</label>
+        <input type="text" id="awayTeam" value="Queenstown Thunder">
 
-        <div class="grid-3">
-            <div>
-                <label>Game / Round Stage</label>
-                <select id="gameStage">
-                    <option value="Game 1">Game 1</option>
-                    <option value="Game 2">Game 2</option>
-                    <option value="Game 3">Game 3</option>
-                    <option value="SF">Semi-Final (SF)</option>
-                    <option value="F">Final (F)</option>
-                </select>
-            </div>
-            <div>
-                <label>Date</label>
-                <input type="date" id="matchDate">
-            </div>
-            <div>
-                <label>Time</label>
-                <input type="time" id="matchTime" value="19:00">
-            </div>
-        </div>
+        <label>Stage / Match Type:</label>
+        <input type="text" id="stage" value="Group Stage">
 
-        <div class="grid-3">
-            <div>
-                <label>Location / Rink</label>
-                <select id="locationSelect">
-                    <option value="Queenstown Ice Arena">Queenstown Ice Arena</option>
-                    <option value="Sydney Ice Arena">Sydney Ice Arena</option>
-                    <option value="Macquarie Ice Rink">Macquarie Ice Rink</option>
-                    <option value="Penrith Ice Palace">Penrith Ice Palace</option>
-                    <option value="O'Brien Icehouse">O'Brien Icehouse</option>
-                </select>
-            </div>
-            <div>
-                <label>Period Length (Minutes)</label>
-                <input type="number" id="periodLength" value="17">
-            </div>
-            <div style="display: flex; align-items: center; gap: 20px; padding-top: 25px;">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="allowOT" checked> OT</label>
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="allowSO" checked> Shootout</label>
-            </div>
-        </div>
+        <label>Google Apps Script Web App URL:</label>
+        <input type="text" id="scriptUrl" placeholder="Paste your deployed Google Apps Script URL here">
     </div>
 
-    <!-- Match Roster Selection Card -->
     <div class="card">
-        <h2>Select Today's Playing Roster</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded live from Google Sheets (Sorted by Jersey #).</p>
-        
-        <table id="gameRosterTable">
+        <h2>2. Team Roster & Hotkeys</h2>
+        <p style="font-size: 0.85rem; color: #94a3b8;">Assign a keyboard hotkey (e.g., A, B, C...) to each player for instant tracking.</p>
+        <table>
             <thead>
                 <tr>
-                    <th style="width: 50px; text-align: center;">Play</th>
-                    <th style="width: 80px;">#</th>
-                    <th>Name</th>
-                    <th>Nickname</th>
-                    <th>Position</th>
+                    <th>Hotkey</th>
+                    <th>Jersey #</th>
+                    <th>First Name</th>
+                    <th>Surname</th>
+                    <th>Position (F/D/G)</th>
+                    <th>Action</th>
                 </tr>
             </thead>
-            <tbody id="gameRosterBody">
-                <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Connecting to Google Sheets...</td></tr>
-            </tbody>
+            <tbody id="rosterTableBody"></tbody>
         </table>
-
-        <!-- Position Tally Summary -->
-        <div class="tally-box">
-            <div class="tally-item">Forwards (F): <span id="tallyF">0</span></div>
-            <div class="tally-item">Defense (D): <span id="tallyD">0</span></div>
-            <div class="tally-item">Goalies (G): <span id="tallyG">0</span></div>
-            <div class="tally-item" style="margin-left: auto;">Total Selected: <span id="tallyTotal">0</span></div>
-        </div>
+        <button class="btn" onclick="addPlayerRow()">+ Add Player</button>
     </div>
 
-    <button class="btn-success" onclick="saveAndProceed()">Save Match Setup & Proceed to Step 2 ➔</button>
+    <button class="btn btn-success" onclick="saveAndProceed()">Save & Proceed to Line Setup ➔</button>
 </div>
 
 <script>
-    // PASTE YOUR EXACT GOOGLE APPS SCRIPT WEB APP URL HERE:
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCPaTpuBE33d_llhKb3HKgviVKxMENQAwH9KHUFlhVcQbwZsKbMQEyD6nY0aHMGXs/exec';
-    
-    const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-    let masterRoster = [];
+    let defaultRoster = [
+        { id: "1", hotkey: "A", number: "55", firstName: "Richard", surname: "Tesarik", position: "F" },
+        { id: "2", hotkey: "B", number: "71", firstName: "Jan", surname: "Cernoch", position: "F" },
+        { id: "3", hotkey: "C", number: "3", firstName: "Ray", surname: "Khalil", position: "D" },
+        { id: "4", hotkey: "D", number: "5", firstName: "Slavo", surname: "Boris", position: "D" },
+        { id: "5", hotkey: "E", number: "39", firstName: "Jim", surname: "Zvonicek", position: "G" }
+    ];
 
-    function initFormDefaults() {
-        let today = new Date().toISOString().split('T')[0];
-        document.getElementById('matchDate').value = today;
+    function loadSavedSetup() {
+        let saved = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+        if (saved.tournament) document.getElementById('tournament').value = saved.tournament;
+        if (saved.awayTeam) document.getElementById('awayTeam').value = saved.awayTeam;
+        if (saved.stage) document.getElementById('stage').value = saved.stage;
+        if (saved.scriptUrl) document.getElementById('scriptUrl').value = saved.scriptUrl;
 
-        let lastSettings = JSON.parse(localStorage.getItem('hockeyLastMatchSettings'));
-        if (lastSettings) {
-            if (lastSettings.tournamentName) document.getElementById('tournamentName').value = lastSettings.tournamentName;
-            if (lastSettings.homeTeam) document.getElementById('homeTeam').value = lastSettings.homeTeam;
-            if (lastSettings.awayTeam) document.getElementById('awayTeam').value = lastSettings.awayTeam;
-            if (lastSettings.gameStage) document.getElementById('gameStage').value = lastSettings.gameStage;
-            if (lastSettings.location) document.getElementById('locationSelect').value = lastSettings.location;
-            if (lastSettings.periodLength) document.getElementById('periodLength').value = lastSettings.periodLength;
-        }
-    }
-
-    function handleRosterResponse(result) {
-        if (result && result.status === 'success' && result.players) {
-            masterRoster = result.players;
-            localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
-            renderGameRoster();
-        } else {
-            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading roster from Google Sheets.</td></tr>';
-        }
-    }
-
-    function renderGameRoster() {
-        let tbody = document.getElementById('gameRosterBody');
-        
-        let activePlayers = masterRoster.filter(p => {
-            let val = String(p.current || '').trim().toUpperCase();
-            return val !== 'N' && val !== 'FALSE' && val !== 'NO';
-        });
-
-        if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found. Check your Google Sheet.</td></tr>';
-            updateTallyFromUI();
-            return;
-        }
-
-        activePlayers.sort((a, b) => {
-            let numA = parseInt(a.number) || 999;
-            let numB = parseInt(b.number) || 999;
-            return numA - numB;
-        });
-
+        let roster = saved.roster || defaultRoster;
+        let tbody = document.getElementById('rosterTableBody');
         tbody.innerHTML = '';
-        activePlayers.forEach(p => {
-            tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
-                <td><strong>#${p.number}</strong></td>
-                <td>${p.firstName} ${p.surname}</td>
-                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
-                <td>${p.position}</td>
-            </tr>`;
-        });
-
-        updateTallyFromUI();
+        roster.forEach(p => appendPlayerRow(p));
     }
 
-    function updateTallyFromUI() {
-        let checkedBoxes = document.querySelectorAll('.player-checkbox:checked');
-        let tally = { F: 0, D: 0, G: 0, Total: 0 };
-
-        checkedBoxes.forEach(cb => {
-            let playerId = cb.getAttribute('data-id');
-            let p = masterRoster.find(item => String(item.id) === String(playerId));
-            if (p) {
-                let pos = String(p.position || '').trim().toUpperCase();
-                if (pos.includes('F')) tally.F++;
-                else if (pos.includes('D')) tally.D++;
-                else if (pos.includes('G')) tally.G++;
-                tally.Total++;
-            }
-        });
-
-        document.getElementById('tallyF').innerText = tally.F;
-        document.getElementById('tallyD').innerText = tally.D;
-        document.getElementById('tallyG').innerText = tally.G;
-        document.getElementById('tallyTotal').innerText = tally.Total;
+    function appendPlayerRow(p = {}) {
+        let tbody = document.getElementById('rosterTableBody');
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="p-hotkey" value="${p.hotkey || ''}" style="width: 50px; text-align:center;" maxlength="1"></td>
+            <td><input type="text" class="p-number" value="${p.number || ''}" style="width: 60px;"></td>
+            <td><input type="text" class="p-firstname" value="${p.firstName || ''}"></td>
+            <td><input type="text" class="p-surname" value="${p.surname || ''}"></td>
+            <td>
+                <select class="p-position">
+                    <option value="F" ${p.position === 'F' ? 'selected' : ''}>Forward (F)</option>
+                    <option value="D" ${p.position === 'D' ? 'selected' : ''}>Defense (D)</option>
+                    <option value="G" ${p.position === 'G' ? 'selected' : ''}>Goalie (G)</option>
+                </select>
+            </td>
+            <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">X</button></td>
+        `;
+        tbody.appendChild(row);
     }
 
-    function backgroundFetchRoster() {
-        localStorage.removeItem('hockeyMasterRoster');
-
-        let script = document.createElement('script');
-        script.src = SCRIPT_URL + '?callback=handleRosterResponse&t=' + new Date().getTime();
-        
-        script.onerror = () => {
-            let cached = localStorage.getItem('hockeyMasterRoster');
-            if (cached) {
-                masterRoster = JSON.parse(cached);
-                renderGameRoster();
-            } else {
-                document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets. Check SCRIPT_URL.</td></tr>';
-            }
-        };
-        document.body.appendChild(script);
+    function addPlayerRow() {
+        appendPlayerRow();
     }
 
     function saveAndProceed() {
-        let selectedCheckboxes = document.querySelectorAll('.player-checkbox:checked');
-        let activeRoster = [];
-
-        selectedCheckboxes.forEach((cb, idx) => {
-            let playerId = cb.getAttribute('data-id');
-            let playerObj = masterRoster.find(p => String(p.id) === String(playerId));
-            if (playerObj) {
-                activeRoster.push({
-                    ...playerObj,
-                    hotkey: hotkeyPool[idx % hotkeyPool.length]
-                });
-            }
+        let rows = document.querySelectorAll('#rosterTableBody tr');
+        let roster = [];
+        rows.forEach((r, idx) => {
+            roster.push({
+                id: String(idx + 1),
+                hotkey: r.querySelector('.p-hotkey').value.toUpperCase().trim(),
+                number: r.querySelector('.p-number').value.trim(),
+                firstName: r.querySelector('.p-firstname').value.trim(),
+                surname: r.querySelector('.p-surname').value.trim(),
+                position: r.querySelector('.p-position').value
+            });
         });
 
-        if (activeRoster.length === 0) { 
-            alert('Please select at least one player for today\'s game.'); 
-            return; 
-        }
-
-        let matchSettings = {
-            scriptUrl: SCRIPT_URL,
-            tournamentName: document.getElementById('tournamentName').value,
-            homeTeam: document.getElementById('homeTeam').value,
-            awayTeam: document.getElementById('awayTeam').value,
-            gameStage: document.getElementById('gameStage').value,
-            matchDate: document.getElementById('matchDate').value,
-            matchTime: document.getElementById('matchTime').value,
-            location: document.getElementById('locationSelect').value,
-            periodLength: document.getElementById('periodLength').value,
-            allowOT: document.getElementById('allowOT').checked,
-            allowSO: document.getElementById('allowSO').checked,
-            roster: activeRoster
+        let matchSetup = {
+            tournament: document.getElementById('tournament').value.trim(),
+            homeTeam: "Sydney Lions",
+            awayTeam: document.getElementById('awayTeam').value.trim(),
+            stage: document.getElementById('stage').value.trim(),
+            scriptUrl: document.getElementById('scriptUrl').value.trim(),
+            roster: roster
         };
 
-        localStorage.setItem('hockeyLastMatchSettings', JSON.stringify(matchSettings));
-        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSettings));
-
+        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
         window.location.href = 'lines.html';
     }
 
-    window.onload = () => {
-        initFormDefaults();
-        backgroundFetchRoster();
-    };
+    window.onload = loadSavedSetup;
 </script>
 
 </body>
