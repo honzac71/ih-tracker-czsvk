@@ -74,7 +74,7 @@
 
 <div class="container" id="appContainer">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations, then save to proceed to the Live Tracker.</p>
+    <p class="section-desc">Assign custom hotkeys to players and line combinations. All positions must be filled before proceeding.</p>
 
     <!-- 1. Player Shortcuts Management Card -->
     <div class="card">
@@ -366,10 +366,23 @@
                             'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
                             'pk3_f','pk3_d1','pk3_d2'];
 
-            allSlots.apply = allSlots.forEach(slot => {
+            // STRICT VALIDATION: Check if any slot is empty
+            let missingSlots = [];
+            allSlots.forEach(slot => {
                 let el = document.getElementById(`line_${slot}`);
-                if (el) lines[slot] = el.value;
+                if (el) {
+                    if (!el.value) {
+                        missingSlots.push(slot);
+                    } else {
+                        lines[slot] = el.value;
+                    }
+                }
             });
+
+            if (missingSlots.length > 0) {
+                alert('⚠️ Incomplete Lineup: You must assign a player to every single position slot before proceeding to the live tracker!');
+                return;
+            }
 
             let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2','PK3','4v4'];
             allLineKeys.forEach(lKey => {
