@@ -59,12 +59,12 @@
 
 <div class="container">
     <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Review your selected players, customize their pre-assigned keyboard shortcuts, and build your lines and special teams units.</p>
+    <p class="section-desc">Customize individual player hotkeys, configure your forward lines, defense pairs, and special teams units.</p>
 
     <!-- Player Shortcuts Management Card -->
     <div class="card">
         <h2>1. Player Shortcuts (Hotkeys)</h2>
-        <p class="section-desc">Pre-assigned hotkeys for live tracking. You can modify any shortcut key below before proceeding.</p>
+        <p class="section-desc">Pre-assigned hotkeys for live tracking. You can modify any shortcut key below.</p>
         <table>
             <thead>
                 <tr>
@@ -85,14 +85,10 @@
         <h2>2. Even Strength Lines</h2>
         
         <h3>Forward Lines (LW - C - RW)</h3>
-        <div id="forwardLinesContainer">
-            <!-- Rendered via JS -->
-        </div>
+        <div id="forwardLinesContainer"></div>
 
         <h3 style="margin-top: 20px;">Defense Pairs (D - D)</h3>
-        <div id="defensePairsContainer">
-            <!-- Rendered via JS -->
-        </div>
+        <div id="defensePairsContainer"></div>
     </div>
 
     <!-- Special Teams -->
@@ -106,7 +102,7 @@
         <div id="pkContainer"></div>
     </div>
 
-    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts ➔ Proceed to Live Game (Step 3)</button>
+    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts to Google Sheets ➔ Proceed</button>
 </div>
 
 <script>
@@ -118,11 +114,9 @@
         window.location.href = 'index.html';
     }
 
-    // Default hotkey pool if not already assigned
     const defaultKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
                          '1','2','3','4','5','6','7','8','9','0'];
 
-    // Ensure all roster players have a hotkey
     roster.forEach((p, idx) => {
         if (!p.hotkey) {
             p.hotkey = defaultKeys[idx % defaultKeys.length];
@@ -162,9 +156,9 @@
                 <div style="margin-bottom: 12px;">
                     <label>Forward Line ${i}</label>
                     <div class="grid-3">
-                        <div><label>LW</label>${createPlayerSelect(`f${i}_lw`, 'F')}</div>
-                        <div><label>C</label>${createPlayerSelect(`f${i}_c`, 'F')}</div>
-                        <div><label>RW</label>${createPlayerSelect(`f${i}_rw`, 'F')}</div>
+                        <div><label>LW</label>${createPlayerSelect(`f${i}_lw`}</div>
+                        <div><label>C</label>${createPlayerSelect(`f${i}_c`}</div>
+                        <div><label>RW</label>${createPlayerSelect(`f${i}_rw`}</div>
                     </div>
                 </div>`;
         }
@@ -177,13 +171,13 @@
                 <div style="margin-bottom: 12px;">
                     <label>Defense Pair ${i}</label>
                     <div class="grid-2">
-                        <div><label>Defense Left</label>${createPlayerSelect(`d${i}_l`, 'D')}</div>
-                        <div><label>Defense Right</label>${createPlayerSelect(`d${i}_r`, 'D')}</div>
+                        <div><label>Defense Left</label>${createPlayerSelect(`d${i}_l`}</div>
+                        <div><label>Defense Right</label>${createPlayerSelect(`d${i}_r`}</div>
                     </div>
                 </div>`;
         }
 
-        // Special Teams PP (PP1, PP2 - 5 players each: LW, C, RW, D, D)
+        // Special Teams PP (PP1, PP2 - LW, C, RW, D, D)
         let ppContainer = document.getElementById('ppContainer');
         ppContainer.innerHTML = '';
         ['PP1', 'PP2'].forEach(unit => {
@@ -191,16 +185,16 @@
                 <div style="margin-bottom: 12px;">
                     <label>${unit} Unit</label>
                     <div class="grid-5">
-                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
-                        <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
-                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
-                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
-                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
+                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`}</div>
+                        <div><label>C</label>${createPlayerSelect(`${unit}_c`}</div>
+                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`}</div>
+                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`}</div>
+                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`}</div>
                     </div>
                 </div>`;
         });
 
-        // Special Teams PK (PK1, PK2 - 5 players each)
+        // Special Teams PK (PK1, PK2 - LW, C, RW, D, D)
         let pkContainer = document.getElementById('pkContainer');
         pkContainer.innerHTML = '';
         ['PK1', 'PK2'].forEach(unit => {
@@ -208,16 +202,15 @@
                 <div style="margin-bottom: 12px;">
                     <label>${unit} Unit</label>
                     <div class="grid-5">
-                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
-                        <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
-                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
-                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
-                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
+                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`}</div>
+                        <div><label>C</label>${createPlayerSelect(`${unit}_c`}</div>
+                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`}</div>
+                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`}</div>
+                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`}</div>
                     </div>
                 </div>`;
         });
 
-        // Restore saved lines if user came back to edit
         let savedLines = matchSetup.lines || {};
         for (let key in savedLines) {
             let el = document.getElementById(key);
@@ -225,7 +218,7 @@
         }
     }
 
-    function createPlayerSelect(selectId, preferredPos = '') {
+    function createPlayerSelect(selectId) {
         let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
         roster.forEach(p => {
             let label = `#${p.number} ${p.firstName} ${p.surname} (${p.position})`;
@@ -235,21 +228,34 @@
         return html;
     }
 
-    function saveLinesAndProceed() {
-        // Collect line assignments
+    async function saveLinesAndProceed() {
         let linesData = {};
         let selects = document.querySelectorAll('select');
         selects.forEach(sel => {
             linesData[sel.id] = sel.value;
         });
 
-        matchSetup.roster = roster; // Save updated hotkeys
+        matchSetup.roster = roster;
         matchSetup.lines = linesData;
 
         localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
 
-        alert('Lines and shortcuts saved successfully! Ready to build Step 3 (Live Game Tracker).');
-        // window.location.href = 'game.html'; // Uncomment when Step 3 is ready
+        // Push setup & lines data to Google Sheets via POST
+        try {
+            await fetch(matchSetup.scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(matchSetup)
+            });
+            alert('Lines and match configuration successfully saved to Google Sheets!');
+        } catch (err) {
+            console.error('Sheet sync error:', err);
+            alert('Saved locally, but Google Sheet sync failed to transmit.');
+        }
+
+        // Proceed to Step 3 (Live Game Tracker)
+        // window.location.href = 'game.html'; 
     }
 
     window.onload = initPage;
