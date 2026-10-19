@@ -93,24 +93,37 @@
         /* Penalty Box Status Board */
         .penalty-box-container {
             background-color: #0f172a;
-            border: 1px solid #ef4444;
+            border: 1px solid #334155;
             border-radius: 6px;
             padding: 12px;
             margin-bottom: 15px;
+            display: none; /* Hidden by default when empty */
         }
-        .penalty-box-item {
+        .penalty-box-item-red {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            padding: 6px 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            padding: 8px 12px;
             border-radius: 4px;
             margin-bottom: 6px;
             font-size: 0.9rem;
+            color: #fca5a5;
         }
-        .penalty-box-item:last-child { margin-bottom: 0; }
-        .penalty-countdown { font-family: monospace; color: #ef4444; font-weight: bold; font-size: 1.1rem; }
+        .penalty-box-item-green {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: #6ee7b7;
+        }
+        .penalty-countdown { font-family: monospace; font-weight: bold; font-size: 1.1rem; }
 
         /* Compact Goalie Status Line */
         .goalie-status-bar {
@@ -201,7 +214,7 @@
                 <span id="displayAway">Away</span> 
                 <span class="away-score-num" id="awayScore">0</span>
                 <div class="shot-subtext">Shots: <span id="awayShotsTotal">0</span></div>
-                <button class="btn-away-goal" onclick="recordAwayGoal()">Opponent Goal [+ O]</button>
+                <button class="btn-away-goal" onclick="recordOpponentPenalty()">Opponent Penalty [Green Box]</button>
             </div>
         </div>
     </div>
@@ -218,9 +231,9 @@
                     <div id="goalieStatusBarContainer"></div>
                 </div>
 
-                <h2>Penalty Box Status</h2>
-                <div class="penalty-box-container" id="penaltyBoxBoard">
-                    <div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>
+                <div id="penaltyBoxWrapper" style="display: none;">
+                    <h2>Penalty Box Status</h2>
+                    <div class="penalty-box-container" id="penaltyBoxBoard" style="display: block;"></div>
                 </div>
 
                 <h3>Live Event Feed</h3>
@@ -292,6 +305,9 @@
         statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
     });
 
+    // Opponent penalty tracking
+    let opponentPenaltySeconds = 0;
+
     let activeForwardIds = [];
     let activeDefenseIds = [];
     let activeSpecialIds = [];
@@ -362,7 +378,7 @@
     }
 
     function startPenaltyTimerIntervalIfNeeded() {
-        let hasActivePenalty = roster.some(p => statsTracker[p.id] && statsTracker[p.id].penaltySeconds > 0);
+        let hasActivePenalty = roster.some(p => statsTracker[p.id] && statsTracker[p.id].penaltySeconds > 0) || opponentPenaltySeconds > 0;
         if (hasActivePenalty && !penaltyTimerInterval) {
             penaltyTimerInterval = setInterval(() => {
                 tickActivePenalties();
@@ -372,6 +388,8 @@
 
     function tickActivePenalties() {
         let activePenaltiesExist = false;
+
+        // Tick own players
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
@@ -383,6 +401,17 @@
                 }
             }
         });
+
+        // Tick opponent penalty
+        if (opponentPenaltySeconds > 0) {
+            opponentPenaltySeconds--;
+            activePenaltiesExist = true;
+            if (opponentPenaltySeconds === 0) {
+                currentSituation = 'EV';
+                updateSituationBadge();
+                logEvent(`Opponent penalty expired. Situation returned to Even Strength (EV).`);
+            }
+        }
 
         if (!activePenaltiesExist) {
             if (penaltyTimerInterval) {
@@ -420,6 +449,7 @@
         logEvent(`Period ${currentPeriod} ended.`);
         if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
         penaltyTimerInterval = null;
+        opponentPenaltySeconds = 0;
 
         if (currentPeriod === 1) {
             currentPeriod = 2;
@@ -490,11 +520,13 @@
     }
 
     function updatePenaltyBoxBoard() {
+        let boxWrapper = document.getElementById('penaltyBoxWrapper');
         let boxBoard = document.getElementById('penaltyBoxBoard');
         let topTimerEl = document.getElementById('penaltyTimerDisplay');
         let boxItems = [];
         let lowestSecs = 999999;
 
+        // Check own players in box
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
@@ -506,7 +538,7 @@
                 let pSecs = st.penaltySeconds % 60;
                 let timeStr = `${pMins}:${pSecs < 10 ? '0' : ''}${pSecs}`;
                 boxItems.push(`
-                    <div class="penalty-box-item">
+                    <div class="penalty-box-item-red">
                         <span>🚨 <strong>#${cleanNum} ${p.surname}</strong> (${p.position || ''})</span>
                         <span class="penalty-countdown">${timeStr}</span>
                     </div>
@@ -514,16 +546,48 @@
             }
         });
 
+        // Check opponent in box (Green box)
+        if (opponentPenaltySeconds > 0) {
+            if (opponentPenaltySeconds < lowestSecs) {
+                lowestSecs = opponentPenaltySeconds;
+            }
+            let opMins = Math.floor(opponentPenaltySeconds / 60);
+            let opSecs = opponentPenaltySeconds % 60;
+            let opTimeStr = `${opMins}:${opSecs < 10 ? '0' : ''}${opSecs}`;
+            boxItems.push(`
+                <div class="penalty-box-item-green">
+                    <span>🟢 <strong>OPPONENT</strong></span>
+                    <span class="penalty-countdown">${opTimeStr}</span>
+                </div>
+            `);
+        }
+
         if (boxItems.length > 0) {
+            boxWrapper.style.display = 'block';
             boxBoard.innerHTML = boxItems.join('');
             let tMins = Math.floor(lowestSecs / 60);
             let tSecs = lowestSecs % 60;
             topTimerEl.innerText = `${tMins}:${tSecs < 10 ? '0' : ''}${tSecs}`;
             topTimerEl.style.display = 'inline';
         } else {
-            boxBoard.innerHTML = `<div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>`;
+            boxWrapper.style.display = 'none';
+            boxBoard.innerHTML = '';
             topTimerEl.style.display = 'none';
         }
+    }
+
+    function recordOpponentPenalty() {
+        opponentPenaltySeconds = 2 * 60; // 2 minutes
+        currentSituation = 'PP';
+        updateSituationBadge();
+        updatePenaltyBoxBoard();
+        
+        if (!penaltyTimerInterval && isClockRunning) {
+            penaltyTimerInterval = setInterval(() => {
+                tickActivePenalties();
+            }, 1000);
+        }
+        logEvent("Opponent Penalty recorded. Sent to penalty box (Green Box). Situation switched to PP.");
     }
 
     function renderControlsReference() {
@@ -719,11 +783,8 @@
         if (!matchedLineKey) return;
 
         let upperKey = matchedLineKey.toUpperCase();
-
-        // Check if anyone is currently in the penalty box
         let hasPlayerInBox = roster.some(p => statsTracker[p.id] && statsTracker[p.id].penaltySeconds > 0);
 
-        // Rule: If serving a penalty (PK/man down), user cannot put PP on
         if (hasPlayerInBox && upperKey.startsWith('PP')) {
             alert(`Cannot deploy ${upperKey} (Power Play): You have a player serving a penalty in the box!`);
             logEvent(`⚠️ BLOCKED: ${upperKey} deployment denied while team is short-handed.`);
@@ -764,12 +825,10 @@
             logEvent(`Special Teams deployed -> ${upperKey} (PK - We are in penalty box)`, rosterList);
         } else {
             isSpecialTeamsMode = false;
-            // If selecting forward lines (f1-f3) while someone is in the penalty box, remove Left Winger (LW) to fit 4-player limit
             if (upperKey.startsWith('F') && hasPlayerInBox) {
                 let filteredIds = [];
                 Object.keys(lines).forEach(slotKey => {
                     if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
-                        // Exclude LW slot when short-handed
                         if (!slotKey.toLowerCase().includes('_lw')) {
                             if (lines[slotKey]) filteredIds.push(String(lines[slotKey]));
                         }
@@ -934,9 +993,10 @@
             logEvent(`GOAL! Scored`, ` (${cleanNum}) [Plus/Minus +1 awarded to on-ice players]`);
 
             if (currentSituation === 'PP') {
+                opponentPenaltySeconds = 0; // Clear opponent penalty on goal
                 currentSituation = 'EV';
                 updateSituationBadge();
-                logEvent(`Power Play goal scored! PP ended -> Both teams full strength (EV).`);
+                logEvent(`Power Play goal scored! Opponent released from penalty box. PP ended -> EV.`);
             } else if (currentSituation === 'PK') {
                 logEvent(`Short-handed goal scored! Penalty Kill continues.`);
             }
@@ -995,6 +1055,7 @@
             }
         });
 
+        // Release all players currently in the penalty box when opponent scores
         roster.forEach(p => {
             let st = statsTracker[p.id];
             if (st && st.penaltySeconds > 0) {
