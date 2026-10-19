@@ -90,6 +90,28 @@
         .rink-hotkey-tag { background: #0369a1; color: #e0f2fe; padding: 1px 5px; border-radius: 3px; font-size: 0.75rem; margin-left: 4px; }
         .rink-name { font-size: 0.85rem; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
         
+        /* Penalty Box Status Board */
+        .penalty-box-container {
+            background-color: #0f172a;
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .penalty-box-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 6px 12px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .penalty-box-item:last-child { margin-bottom: 0; }
+        .penalty-countdown { font-family: monospace; color: #ef4444; font-weight: bold; font-size: 1.1rem; }
+
         /* Compact Goalie Status Line */
         .goalie-status-bar {
             margin-top: 10px;
@@ -127,7 +149,7 @@
             border: 1px solid #334155;
             border-radius: 6px;
             padding: 10px;
-            height: 240px;
+            height: 200px;
             overflow-y: auto;
             font-family: monospace;
             font-size: 0.85rem;
@@ -180,7 +202,7 @@
     </div>
 
     <div class="grid-dashboard">
-        <!-- Left Column: Graphical Rink & Feed -->
+        <!-- Left Column: Graphical Rink, Penalty Box & Feed -->
         <div>
             <div class="card">
                 <h2>Currently On Ice (Graphical Rink)</h2>
@@ -191,9 +213,14 @@
                     <div id="goalieStatusBarContainer"></div>
                 </div>
 
+                <h2>Penalty Box Status</h2>
+                <div class="penalty-box-container" id="penaltyBoxBoard">
+                    <div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>
+                </div>
+
                 <h3>Live Event Feed</h3>
                 <div class="event-log" id="eventLog">
-                    <div class="event-item">[17:00] Tracker initialized. Press [F11] for 4v4.</div>
+                    <div class="event-item">[17:00] Tracker initialized. Press Space Bar to start clock.</div>
                 </div>
             </div>
         </div>
@@ -257,7 +284,7 @@
 
     let statsTracker = {};
     roster.forEach(p => {
-        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
+        statsTracker[p.id] = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
     });
 
     let activeForwardIds = [];
@@ -287,6 +314,7 @@
         renderControlsReference();
         renderRosterTable();
         updateGraphicalRink();
+        updatePenaltyBoxBoard();
         updateClockDisplay();
     }
 
@@ -315,6 +343,7 @@
                 if (clockSeconds > 0) {
                     clockSeconds--;
                     updateClockDisplay();
+                    tickActivePenalties();
                     accumulateTOI();
                 } else {
                     clearInterval(clockInterval);
@@ -329,6 +358,21 @@
                 startPenaltyTimerInterval();
             }
         }
+    }
+
+    function tickActivePenalties() {
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                st.penaltySeconds--;
+                if (st.penaltySeconds === 0) {
+                    let cleanNum = String(p.number || '').replace('#', '').trim();
+                    logEvent(`Player #${cleanNum} (${p.surname}) penalty expired. Returned from box.`);
+                }
+            }
+        });
+        renderRosterTable();
+        updatePenaltyBoxBoard();
     }
 
     function accumulateTOI() {
@@ -452,6 +496,33 @@
         }
     }
 
+    function updatePenaltyBoxBoard() {
+        let boxBoard = document.getElementById('penaltyBoxBoard');
+        let boxItems = [];
+
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                let cleanNum = String(p.number || '').replace('#', '').trim();
+                let pMins = Math.floor(st.penaltySeconds / 60);
+                let pSecs = st.penaltySeconds % 60;
+                let timeStr = `${pMins}:${pSecs < 10 ? '0' : ''}${pSecs}`;
+                boxItems.push(`
+                    <div class="penalty-box-item">
+                        <span>🚨 <strong>#${cleanNum} ${p.surname}</strong> (${p.position || ''})</span>
+                        <span class="penalty-countdown">${timeStr}</span>
+                    </div>
+                `);
+            }
+        });
+
+        if (boxItems.length > 0) {
+            boxBoard.innerHTML = boxItems.join('');
+        } else {
+            boxBoard.innerHTML = `<div style="color: #94a3b8; font-size: 0.85rem; text-align: center;">Penalty box is currently empty</div>`;
+        }
+    }
+
     function renderControlsReference() {
         let box = document.getElementById('controlsReferenceBox');
         let html = `<p style="margin-bottom: 8px; color: #f8fafc; font-weight: bold;">Line Quick View (Player Numbers):</p>`;
@@ -480,7 +551,8 @@
             <p><span>F11:</span> Set 4v4 Formation</p>
             <p><span>Q:</span> Shot on Own Goal (Opponent Shot)</p>
             <p><span>Shift + [Key]:</span> Sub Single Player On Ice</p>
-            <p><span>G/A/S/P + [Key]:</span> Record Stat (On-Ice Only)</p>
+            <p><span>P + [Key]:</span> Record Penalty (Sends to Box)</p>
+            <p><span>G/A/S + [Key]:</span> Record Stat (On-Ice Only)</p>
         `;
         box.innerHTML = html;
     }
@@ -491,7 +563,7 @@
         let currentOnIce = getAllOnIceIds();
 
         roster.forEach(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
             let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
@@ -499,10 +571,17 @@
             let toiFormatted = formatTOI(st.toiSeconds);
             let surnameOnly = p.surname || '';
             
+            let penaltyDisplay = "";
+            if (st.penaltySeconds > 0) {
+                let pMins = Math.floor(st.penaltySeconds / 60);
+                let pSecs = st.penaltySeconds % 60;
+                penaltyDisplay = ` <span style="color: #ef4444; font-size: 0.8rem;">[Box: ${pMins}:${pSecs < 10 ? '0' : ''}${pSecs}]</span>`;
+            }
+            
             tbody.innerHTML += `<tr style="${isOnIce}">
                 <td><span class="badge">${p.hotkey || '-'}</span></td>
                 <td>${cleanNum}</td>
-                <td>${surnameOnly}</td>
+                <td>${surnameOnly}${penaltyDisplay}</td>
                 <td>${st.goals}/${st.assists}/${st.shots}/${st.pim}</td>
                 <td>${toiFormatted}</td>
                 <td style="${pmColor} font-weight: bold;">${pmFormatted}</td>
@@ -516,7 +595,10 @@
         if (goalie && !manualGoalieOut && !ids.includes(String(goalie.id))) {
             ids.push(String(goalie.id));
         }
-        return ids;
+        return ids.filter(id => {
+            let st = statsTracker[id];
+            return !st || st.penaltySeconds === 0;
+        });
     }
 
     function getCurrentOnIceNumbersList() {
@@ -551,12 +633,28 @@
 
         if (e.code === 'F11') {
             e.preventDefault();
+            
+            let candidateIds = [];
+            Object.keys(lines).forEach(slotKey => {
+                if (slotKey.toLowerCase().startsWith('4v4')) {
+                    if (lines[slotKey]) candidateIds.push(String(lines[slotKey]));
+                }
+            });
+
+            let penalizedPlayer = candidateIds.find(id => statsTracker[id] && statsTracker[id].penaltySeconds > 0);
+            if (penalizedPlayer) {
+                let pObj = roster.find(item => String(item.id) === String(penalizedPlayer));
+                let pNum = pObj ? String(pObj.number || '').replace('#', '').trim() : '';
+                alert(`Cannot deploy 4v4: Player #${pNum} (${pObj ? pObj.surname : ''}) is currently serving a penalty in the box!`);
+                logEvent(`⚠️ BLOCKED: 4v4 deployment denied due to player #${pNum} in penalty box.`);
+                return;
+            }
+
             currentSituation = '4v4';
             isSpecialTeamsMode = false;
             activeForwardIds = [];
             activeDefenseIds = [];
             
-            // Pull 4v4 slots from lines config
             Object.keys(lines).forEach(slotKey => {
                 if (slotKey.toLowerCase().startsWith('4v4')) {
                     if (lines[slotKey]) {
@@ -619,14 +717,26 @@
 
         let upperKey = matchedLineKey.toUpperCase();
 
+        let candidateIds = [];
+        Object.keys(lines).forEach(slotKey => {
+            if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
+                if (lines[slotKey]) candidateIds.push(String(lines[slotKey]));
+            }
+        });
+
+        let penalizedPlayer = candidateIds.find(id => statsTracker[id] && statsTracker[id].penaltySeconds > 0);
+        if (penalizedPlayer) {
+            let pObj = roster.find(item => String(item.id) === String(penalizedPlayer));
+            let pNum = pObj ? String(pObj.number || '').replace('#', '').trim() : '';
+            alert(`Cannot deploy ${upperKey}: Player #${pNum} (${pObj ? pObj.surname : ''}) is currently serving a penalty in the box!`);
+            logEvent(`⚠️ BLOCKED: ${upperKey} deployment denied due to player #${pNum} in penalty box.`);
+            return;
+        }
+
         if (upperKey.startsWith('PP')) {
             isSpecialTeamsMode = true;
             activeSpecialIds = [];
-            Object.keys(lines).forEach(slotKey => {
-                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
-                    if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
-                }
-            });
+            candidateIds.forEach(id => activeSpecialIds.push(id));
             currentSituation = 'PP';
             updateSituationBadge();
             triggerPenaltyCountdown();
@@ -635,11 +745,7 @@
         } else if (upperKey.startsWith('PK')) {
             isSpecialTeamsMode = true;
             activeSpecialIds = [];
-            Object.keys(lines).forEach(slotKey => {
-                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
-                    if (lines[slotKey]) activeSpecialIds.push(String(lines[slotKey]));
-                }
-            });
+            candidateIds.forEach(id => activeSpecialIds.push(id));
             currentSituation = 'PK';
             updateSituationBadge();
             triggerPenaltyCountdown();
@@ -649,12 +755,7 @@
             isSpecialTeamsMode = false;
             currentSituation = 'EV';
             updateSituationBadge();
-            let targetIds = [];
-            Object.keys(lines).forEach(slotKey => {
-                if (slotKey.toLowerCase().startsWith(matchedLineKey.toLowerCase())) {
-                    if (lines[slotKey]) targetIds.push(String(lines[slotKey]));
-                }
-            });
+            let targetIds = candidateIds;
 
             if (upperKey.startsWith('F')) {
                 activeForwardIds = targetIds;
@@ -728,8 +829,16 @@
 
     function toggleSinglePlayerSub(player) {
         let idStr = String(player.id);
-        let pos = String(player.position || '').toUpperCase().trim();
+        let st = statsTracker[idStr];
         let cleanNum = String(player.number || '').replace('#', '').trim();
+
+        if (st && st.penaltySeconds > 0) {
+            alert(`Cannot sub player #${cleanNum} (${player.surname}): Currently serving a penalty in the box!`);
+            logEvent(`⚠️ BLOCKED: Sub toggle denied for #${cleanNum} in penalty box.`);
+            return;
+        }
+
+        let pos = String(player.position || '').toUpperCase().trim();
         let isGoalie = pos === 'G' || pos.includes('GOALIE') || pos.startsWith('G');
 
         if (isGoalie) {
@@ -778,7 +887,7 @@
 
         let st = statsTracker[player.id];
         if (!st) {
-            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
+            st = { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             statsTracker[player.id] = st;
         }
 
@@ -801,7 +910,7 @@
                 updateSituationBadge();
                 logEvent(`Power Play goal scored! PP ended -> Both teams full strength (EV).`);
             } else if (currentSituation === 'PK') {
-                logEvent(`Short-handed goal scored! Penalty Kill continues[cite: 3].`);
+                logEvent(`Short-handed goal scored! Penalty Kill continues.`);
             }
 
         } else if (mod === 'A') {
@@ -814,9 +923,19 @@
             logEvent(`Shot on Goal`, ` (${cleanNum})`);
         } else if (mod === 'P') {
             st.pim += 2;
-            logEvent(`Penalty (2 min)`, ` (${cleanNum})`);
+            st.penaltySeconds = 2 * 60; // 2 minutes in penalty box
+            
+            if (isOnIce) {
+                activeForwardIds = activeForwardIds.filter(id => id !== String(player.id));
+                activeDefenseIds = activeDefenseIds.filter(id => id !== String(player.id));
+                activeSpecialIds = activeSpecialIds.filter(id => id !== String(player.id));
+                updateGraphicalRink();
+            }
+
+            logEvent(`PENALTY (2 min) assigned to #${cleanNum} ${player.surname}. Sent to penalty box.`);
         }
         renderRosterTable();
+        updatePenaltyBoxBoard();
     }
 
     function recordAwayGoal() {
@@ -830,25 +949,35 @@
             }
         });
 
+        roster.forEach(p => {
+            let st = statsTracker[p.id];
+            if (st && st.penaltySeconds > 0) {
+                st.penaltySeconds = 0;
+                let cNum = String(p.number || '').replace('#', '').trim();
+                logEvent(`Opponent goal scored -> Player #${cNum} (${p.surname}) released early from penalty box.`);
+            }
+        });
+
         logEvent(`OPPONENT GOAL! Conceded. [Plus/Minus -1 awarded to on-ice players]`);
 
         if (currentSituation === 'PP') {
-            logEvent(`Opponent scored during our Power Play -> PP continues[cite: 3].`);
+            logEvent(`Opponent scored during our Power Play -> PP continues.`);
         } else if (currentSituation === 'PK') {
             if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
             currentSituation = 'EV';
             updateSituationBadge();
-            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV[cite: 3].`);
+            logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV.`);
         }
 
         renderRosterTable();
+        updatePenaltyBoxBoard();
     }
 
     async function endGameAndSync() {
         if (!confirm('Are you sure you want to end the match and sync all player statistics to Google Sheets?')) return;
 
         let playerStatsArray = roster.map(p => {
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             let cleanNum = String(p.number || '').replace('#', '').trim();
             return {
                 jersey: cleanNum,
