@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Hockey Match Tracker - Step 2: Lines & Shortcuts Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 { color: #38bdf8; }
+        select, input {
+            padding: 8px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        label { font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 3px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.95rem; }
+        th { background-color: #0f172a; color: #94a3b8; }
+        
+        .shortcut-input {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #38bdf8;
+            background-color: #0f172a;
+            border: 1px solid #0284c7;
+        }
+        .btn-success { background-color: #10b981; color: white; border: none; padding: 14px; font-size: 1.1rem; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .btn-success:hover { background-color: #059669; }
+        .section-desc { color: #94a3b8; font-size: 0.9rem; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Ice Hockey Line & Shortcut Configuration</h1>
+    <p class="section-desc">Review your selected players, customize their pre-assigned keyboard shortcuts, and build your lines and special teams units.</p>
+
+    <!-- Player Shortcuts Management Card -->
+    <div class="card">
+        <h2>1. Player Shortcuts (Hotkeys)</h2>
+        <p class="section-desc">Pre-assigned hotkeys for live tracking. You can modify any shortcut key below before proceeding.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Jersey</th>
+                    <th>Player Name</th>
+                    <th>Position</th>
+                    <th style="width: 120px; text-align: center;">Hotkey</th>
+                </tr>
+            </thead>
+            <tbody id="playerShortcutsBody">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Forward Lines & Defense Pairs -->
+    <div class="card">
+        <h2>2. Even Strength Lines</h2>
+        
+        <h3>Forward Lines (LW - C - RW)</h3>
+        <div id="forwardLinesContainer">
+            <!-- Rendered via JS -->
+        </div>
+
+        <h3 style="margin-top: 20px;">Defense Pairs (D - D)</h3>
+        <div id="defensePairsContainer">
+            <!-- Rendered via JS -->
+        </div>
+    </div>
+
+    <!-- Special Teams -->
+    <div class="card">
+        <h2>3. Special Teams Units (LW - C - RW - D - D)</h2>
+        
+        <h3>Power Play (PP1 & PP2)</h3>
+        <div id="ppContainer"></div>
+
+        <h3 style="margin-top: 20px;">Penalty Kill (PK1 & PK2)</h3>
+        <div id="pkContainer"></div>
+    </div>
+
+    <button class="btn-success" onclick="saveLinesAndProceed()">Save Lines & Shortcuts ➔ Proceed to Live Game (Step 3)</button>
+</div>
+
+<script>
+    let matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
+    let roster = matchSetup.roster || [];
+
+    if (roster.length === 0) {
+        alert('No roster found! Returning to Step 1 setup.');
+        window.location.href = 'index.html';
+    }
+
+    // Default hotkey pool if not already assigned
+    const defaultKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+                         '1','2','3','4','5','6','7','8','9','0'];
+
+    // Ensure all roster players have a hotkey
+    roster.forEach((p, idx) => {
+        if (!p.hotkey) {
+            p.hotkey = defaultKeys[idx % defaultKeys.length];
+        }
+    });
+
+    function initPage() {
+        renderPlayerShortcutsTable();
+        renderLineBuilders();
+    }
+
+    function renderPlayerShortcutsTable() {
+        let tbody = document.getElementById('playerShortcutsBody');
+        tbody.innerHTML = '';
+        roster.forEach((p, idx) => {
+            tbody.innerHTML += `<tr>
+                <td><strong>#${p.number}</strong></td>
+                <td>${p.firstName} ${p.surname} ${p.nickname ? '('+p.nickname+')' : ''}</td>
+                <td>${p.position}</td>
+                <td style="text-align: center;">
+                    <input type="text" maxlength="1" class="shortcut-input" id="p-key-${idx}" value="${p.hotkey}" onchange="updatePlayerHotkey(${idx}, this.value)">
+                </td>
+            </tr>`;
+        });
+    }
+
+    function updatePlayerHotkey(idx, val) {
+        roster[idx].hotkey = val.toUpperCase();
+    }
+
+    function renderLineBuilders() {
+        // Forward Lines (3 lines: LW, C, RW)
+        let fContainer = document.getElementById('forwardLinesContainer');
+        fContainer.innerHTML = '';
+        for (let i = 1; i <= 3; i++) {
+            fContainer.innerHTML += `
+                <div style="margin-bottom: 12px;">
+                    <label>Forward Line ${i}</label>
+                    <div class="grid-3">
+                        <div><label>LW</label>${createPlayerSelect(`f${i}_lw`, 'F')}</div>
+                        <div><label>C</label>${createPlayerSelect(`f${i}_c`, 'F')}</div>
+                        <div><label>RW</label>${createPlayerSelect(`f${i}_rw`, 'F')}</div>
+                    </div>
+                </div>`;
+        }
+
+        // Defense Pairs (2 pairs: D, D)
+        let dContainer = document.getElementById('defensePairsContainer');
+        dContainer.innerHTML = '';
+        for (let i = 1; i <= 2; i++) {
+            dContainer.innerHTML += `
+                <div style="margin-bottom: 12px;">
+                    <label>Defense Pair ${i}</label>
+                    <div class="grid-2">
+                        <div><label>Defense Left</label>${createPlayerSelect(`d${i}_l`, 'D')}</div>
+                        <div><label>Defense Right</label>${createPlayerSelect(`d${i}_r`, 'D')}</div>
+                    </div>
+                </div>`;
+        }
+
+        // Special Teams PP (PP1, PP2 - 5 players each: LW, C, RW, D, D)
+        let ppContainer = document.getElementById('ppContainer');
+        ppContainer.innerHTML = '';
+        ['PP1', 'PP2'].forEach(unit => {
+            ppContainer.innerHTML += `
+                <div style="margin-bottom: 12px;">
+                    <label>${unit} Unit</label>
+                    <div class="grid-5">
+                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
+                        <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
+                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
+                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
+                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
+                    </div>
+                </div>`;
+        });
+
+        // Special Teams PK (PK1, PK2 - 5 players each)
+        let pkContainer = document.getElementById('pkContainer');
+        pkContainer.innerHTML = '';
+        ['PK1', 'PK2'].forEach(unit => {
+            pkContainer.innerHTML += `
+                <div style="margin-bottom: 12px;">
+                    <label>${unit} Unit</label>
+                    <div class="grid-5">
+                        <div><label>LW</label>${createPlayerSelect(`${unit}_lw`)}</div>
+                        <div><label>C</label>${createPlayerSelect(`${unit}_c`)}</div>
+                        <div><label>RW</label>${createPlayerSelect(`${unit}_rw`)}</div>
+                        <div><label>LD</label>${createPlayerSelect(`${unit}_ld`)}</div>
+                        <div><label>RD</label>${createPlayerSelect(`${unit}_rd`)}</div>
+                    </div>
+                </div>`;
+        });
+
+        // Restore saved lines if user came back to edit
+        let savedLines = matchSetup.lines || {};
+        for (let key in savedLines) {
+            let el = document.getElementById(key);
+            if (el) el.value = savedLines[key];
+        }
+    }
+
+    function createPlayerSelect(selectId, preferredPos = '') {
+        let html = `<select id="${selectId}"><option value="">-- Select --</option>`;
+        roster.forEach(p => {
+            let label = `#${p.number} ${p.firstName} ${p.surname} (${p.position})`;
+            html += `<option value="${p.id}">${label}</option>`;
+        });
+        html += `</select>`;
+        return html;
+    }
+
+    function saveLinesAndProceed() {
+        // Collect line assignments
+        let linesData = {};
+        let selects = document.querySelectorAll('select');
+        selects.forEach(sel => {
+            linesData[sel.id] = sel.value;
+        });
+
+        matchSetup.roster = roster; // Save updated hotkeys
+        matchSetup.lines = linesData;
+
+        localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
+
+        alert('Lines and shortcuts saved successfully! Ready to build Step 3 (Live Game Tracker).');
+        // window.location.href = 'game.html'; // Uncomment when Step 3 is ready
+    }
+
+    window.onload = initPage;
+</script>
+
+</body>
+</html>
