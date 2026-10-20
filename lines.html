@@ -74,7 +74,6 @@ margin-bottom: 8px;
 
 <div class="container" id="appContainer">
 <h1>Ice Hockey Line & Shortcut Configuration</h1>
-    <p class="section-desc">Assign custom hotkeys to players and line combinations. All positions must be filled before proceeding.</p>
     <p class="section-desc">Assign custom hotkeys to players and line combinations. All positions must be filled and unique before proceeding.</p>
 
 <!-- 1. Player Shortcuts Management Card -->
@@ -139,7 +138,8 @@ document.getElementById('appContainer').innerHTML = `
 <a href="index.html" style="display: inline-block; background-color: #0284c7; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 15px;">Go to Step 1 (Index)</a>
 </div>`;
 } else {
-const defaultKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+// OMITTING 'Z', using A-Y and numbers only
+const defaultKeys = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y',
 '1','2','3','4','5','6','7','8','9','0'];
 
 roster.forEach((p, idx) => {
@@ -159,16 +159,16 @@ let defaultLineKeys = {
 let lineShortcuts = matchSetup.lineShortcuts || defaultLineKeys;
 let savedLines = matchSetup.lines || {};
 
-        const allSlots = [
-            'f1_lw','f1_c','f1_rw','f2_lw','f2_c','f2_rw','f3_lw','f3_c','f3_rw',
-            'd1_ld','d1_rd','d2_ld','d2_rd',
-            '4v4_f1','4v4_f2','4v4_d1','4v4_d2',
-            'pp1_lw','pp1_c','pp1_rw','pp1_ld','pp1_rd',
-            'pp2_lw','pp2_c','pp2_rw','pp2_ld','pp2_rd',
-            'pk1_f1','pk1_f2','pk1_d1','pk1_d2',
-            'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
-            'pk3_f','pk3_d1','pk3_d2'
-        ];
+const allSlots = [
+    'f1_lw','f1_c','f1_rw','f2_lw','f2_c','f2_rw','f3_lw','f3_c','f3_rw',
+    'd1_ld','d1_rd','d2_ld','d2_rd',
+    '4v4_f1','4v4_f2','4v4_d1','4v4_d2',
+    'pp1_lw','pp1_c','pp1_rw','pp1_ld','pp1_rd',
+    'pp2_lw','pp2_c','pp2_rw','pp2_ld','pp2_rd',
+    'pk1_f1','pk1_f2','pk1_d1','pk1_d2',
+    'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
+    'pk3_f','pk3_d1','pk3_d2'
+];
 
 function cleanNumber(numStr) {
 if (!numStr) return '';
@@ -198,7 +198,20 @@ tbody.innerHTML += `<tr>
 }
 
 window.updatePlayerHotkey = function(idx, val) {
-roster[idx].hotkey = val.toUpperCase();
+let newKey = val.toUpperCase().trim();
+if (newKey === 'Z') {
+alert("⚠️ Hotkey 'Z' is reserved/omitted and cannot be used.");
+document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
+return;
+}
+// Check duplicate player hotkeys
+let duplicateIndex = roster.findIndex((p, i) => i !== idx && p.hotkey === newKey);
+if (duplicateIndex !== -1) {
+alert(`⚠️ Duplicate Hotkey: '${newKey}' is already assigned to another player!`);
+document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
+return;
+}
+roster[idx].hotkey = newKey;
 };
 
 function createPlayerSelect(slotKey) {
@@ -209,35 +222,33 @@ let isSelected = String(selectedVal) === String(p.id) ? 'selected' : '';
 let cleanNum = cleanNumber(p.number);
 options += `<option value="${p.id}" ${isSelected}>${cleanNum} - ${p.surname} (${p.position})</option>`;
 });
-            return `<select id="line_${slotKey}">${options}</select>`;
-            return `<select id="line_${slotKey}" onchange="validatePlayerUniqueness('${slotKey}')">${options}</select>`;
+return `<select id="line_${slotKey}" onchange="validatePlayerUniqueness('${slotKey}')">${options}</select>`;
 }
 
-        // PREVENT SAME PLAYER MULTIPLE TIMES IN DROPDOWNS
-        window.validatePlayerUniqueness = function(changedSlotKey) {
-            let changedSelect = document.getElementById(`line_${changedSlotKey}`);
-            let selectedPlayerId = changedSelect.value;
+// PREVENT SAME PLAYER MULTIPLE TIMES IN DROPDOWNS
+window.validatePlayerUniqueness = function(changedSlotKey) {
+    let changedSelect = document.getElementById(`line_${changedSlotKey}`);
+    let selectedPlayerId = changedSelect.value;
 
-            if (!selectedPlayerId) return; // Empty selection allowed
+    if (!selectedPlayerId) return;
 
-            // Check if this player is already selected in any OTHER slot
-            let duplicateSlot = null;
-            allSlots.forEach(slot => {
-                if (slot !== changedSlotKey) {
-                    let slotEl = document.getElementById(`line_${slot}`);
-                    if (slotEl && slotEl.value === selectedPlayerId) {
-                        duplicateSlot = slot;
-                    }
-                }
-            });
-
-            if (duplicateSlot) {
-                let playerObj = roster.find(p => String(p.id) === String(selectedPlayerId));
-                let playerName = playerObj ? `${playerObj.surname} (#${cleanNumber(playerObj.number)})` : 'This player';
-                alert(`⚠️ Duplicate Selection: ${playerName} is already assigned to another position slot! A player cannot be added twice.`);
-                changedSelect.value = ""; // Reset this dropdown
+    let duplicateSlot = null;
+    allSlots.forEach(slot => {
+        if (slot !== changedSlotKey) {
+            let slotEl = document.getElementById(`line_${slot}`);
+            if (slotEl && slotEl.value === selectedPlayerId) {
+                duplicateSlot = slot;
             }
-        };
+        }
+    });
+
+    if (duplicateSlot) {
+        let playerObj = roster.find(p => String(p.id) === String(selectedPlayerId));
+        let playerName = playerObj ? `${playerObj.surname} (#${cleanNumber(playerObj.number)})` : 'This player';
+        alert(`⚠️ Duplicate Selection: ${playerName} is already assigned to another position slot! A player cannot be added twice.`);
+        changedSelect.value = "";
+    }
+};
 
 function renderLineBuilders() {
 // Forward Lines (F1 - F3)
@@ -309,138 +320,127 @@ v4Container.innerHTML = `
 <div><label>F1</label>${createPlayerSelect('4v4_f1')}</div>
 <div><label>F2</label>${createPlayerSelect('4v4_f2')}</div>
 <div><label>D1</label>${createPlayerSelect('4v4_d1')}</div>
-                            <div><label>D2</label>${createPlayerSelect('4v4_d2')}</div>
-                        </div>
-                    </div>`;
-            }
+<div><label>D2</label>${createPlayerSelect('4v4_d2')}</div>
+</div>
+</div>`;
+}
 
-            // Power Play Units (PP1 - PP2)
-            let ppContainer = document.getElementById('ppContainer');
-            if (ppContainer) {
-                let html = '<h3>Power Play Units (LW - C - RW - LD - RD)</h3>';
-                for (let i = 1; i <= 2; i++) {
-                    let lineId = `PP${i}`;
-                    let currentKey = lineShortcuts[lineId] || `F${i+5}`;
-                    html += `
-                        <div class="line-row">
-                            <div class="line-header">
-                                <span class="line-title">Power Play ${i}</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
-                                </div>
-                            </div>
-                            <div class="grid-5">
-                                <div><label>LW</label>${createPlayerSelect(`${lineId.toLowerCase()}_lw`)}</div>
-                                <div><label>C</label>${createPlayerSelect(`${lineId.toLowerCase()}_c`)}</div>
-                                <div><label>RW</label>${createPlayerSelect(`${lineId.toLowerCase()}_rw`)}</div>
-                                <div><label>LD</label>${createPlayerSelect(`${lineId.toLowerCase()}_ld`)}</div>
-                                <div><label>RD</label>${createPlayerSelect(`${lineId.toLowerCase()}_rd`)}</div>
-                            </div>
-                        </div>`;
-                }
-                ppContainer.innerHTML = html;
-            }
+// Power Play Units (PP1 - PP2)
+let ppContainer = document.getElementById('ppContainer');
+if (ppContainer) {
+let html = '<h3>Power Play Units (LW - C - RW - LD - RD)</h3>';
+for (let i = 1; i <= 2; i++) {
+let lineId = `PP${i}`;
+let currentKey = lineShortcuts[lineId] || `F${i+5}`;
+html += `
+<div class="line-row">
+<div class="line-header">
+<span class="line-title">Power Play ${i}</span>
+<div style="display: flex; align-items: center; gap: 8px;">
+<label style="margin:0;">Line Hotkey:</label>
+<input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+</div>
+</div>
+<div class="grid-5">
+<div><label>LW</label>${createPlayerSelect(`${lineId.toLowerCase()}_lw`)}</div>
+<div><label>C</label>${createPlayerSelect(`${lineId.toLowerCase()}_c`)}</div>
+<div><label>RW</label>${createPlayerSelect(`${lineId.toLowerCase()}_rw`)}</div>
+<div><label>LD</label>${createPlayerSelect(`${lineId.toLowerCase()}_ld`)}</div>
+<div><label>RD</label>${createPlayerSelect(`${lineId.toLowerCase()}_rd`)}</div>
+</div>
+</div>`;
+}
+ppContainer.innerHTML = html;
+}
 
-            // Penalty Kill Units (PK1 - PK2)
-            let pkContainer = document.getElementById('pkContainer');
-            if (pkContainer) {
-                let html = '<h3>Penalty Kill Units (F1 - F2 - D1 - D2)</h3>';
-                for (let i = 1; i <= 2; i++) {
-                    let lineId = `PK${i}`;
-                    let currentKey = lineShortcuts[lineId] || `F${i+7}`;
-                    html += `
-                        <div class="line-row">
-                            <div class="line-header">
-                                <span class="line-title">Penalty Kill ${i}</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <label style="margin:0;">Line Hotkey:</label>
-                                    <input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
-                                </div>
-                            </div>
-                            <div class="grid-4">
-                                <div><label>F1</label>${createPlayerSelect(`${lineId.toLowerCase()}_f1`)}</div>
-                                <div><label>F2</label>${createPlayerSelect(`${lineId.toLowerCase()}_f2`)}</div>
-                                <div><label>D1</label>${createPlayerSelect(`${lineId.toLowerCase()}_d1`)}</div>
-                                <div><label>D2</label>${createPlayerSelect(`${lineId.toLowerCase()}_d2`)}</div>
-                            </div>
-                        </div>`;
-                }
-                pkContainer.innerHTML = html;
-            }
+// Penalty Kill Units (PK1 - PK2)
+let pkContainer = document.getElementById('pkContainer');
+if (pkContainer) {
+let html = '<h3>Penalty Kill Units (F1 - F2 - D1 - D2)</h3>';
+for (let i = 1; i <= 2; i++) {
+let lineId = `PK${i}`;
+let currentKey = lineShortcuts[lineId] || `F${i+7}`;
+html += `
+<div class="line-row">
+<div class="line-header">
+<span class="line-title">Penalty Kill ${i}</span>
+<div style="display: flex; align-items: center; gap: 8px;">
+<label style="margin:0;">Line Hotkey:</label>
+<input type="text" maxlength="4" class="shortcut-input" id="key_${lineId}" value="${currentKey}">
+</div>
+</div>
+<div class="grid-4">
+<div><label>F1</label>${createPlayerSelect(`${lineId.toLowerCase()}_f1`)}</div>
+<div><label>F2</label>${createPlayerSelect(`${lineId.toLowerCase()}_f2`)}</div>
+<div><label>D1</label>${createPlayerSelect(`${lineId.toLowerCase()}_d1`)}</div>
+<div><label>D2</label>${createPlayerSelect(`${lineId.toLowerCase()}_d2`)}</div>
+</div>
+</div>`;
+}
+pkContainer.innerHTML = html;
+}
 
-            // 3-Man Penalty Kill Unit (PK3 - F10)
-            let pk3Container = document.getElementById('pk3Container');
-            if (pk3Container) {
-                let currentKey = lineShortcuts['PK3'] || 'F10';
-                pk3Container.innerHTML = `
-                    <h3>3-Man Penalty Kill Unit (PK3 - 1 Forward, 2 Defense)</h3>
-                    <div class="line-row">
-                        <div class="line-header">
-                            <span class="line-title">PK3 Unit</span>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <label style="margin:0;">Line Hotkey:</label>
-                                <input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${currentKey}">
-                            </div>
-                        </div>
-                        <div class="grid-3">
-                            <div><label>F</label>${createPlayerSelect('pk3_f')}</div>
-                            <div><label>D1</label>${createPlayerSelect('pk3_d1')}</div>
-                            <div><label>D2</label>${createPlayerSelect('pk3_d2')}</div>
-                        </div>
-                    </div>`;
-            }
-        }
+// 3-Man Penalty Kill Unit (PK3 - F10)
+let pk3Container = document.getElementById('pk3Container');
+if (pk3Container) {
+let currentKey = lineShortcuts['PK3'] || 'F10';
+pk3Container.innerHTML = `
+<h3>3-Man Penalty Kill Unit (PK3 - 1 Forward, 2 Defense)</h3>
+<div class="line-row">
+<div class="line-header">
+<span class="line-title">PK3 Unit</span>
+<div style="display: flex; align-items: center; gap: 8px;">
+<label style="margin:0;">Line Hotkey:</label>
+<input type="text" maxlength="4" class="shortcut-input" id="key_PK3" value="${currentKey}">
+</div>
+</div>
+<div class="grid-3">
+<div><label>F</label>${createPlayerSelect('pk3_f')}</div>
+<div><label>D1</label>${createPlayerSelect('pk3_d1')}</div>
+<div><label>D2</label>${createPlayerSelect('pk3_d2')}</div>
+</div>
+</div>`;
+}
+}
 
-        window.saveLinesAndProceed = function() {
-            let lines = {};
-            let shortcuts = {};
+window.saveLinesAndProceed = function() {
+let lines = {};
+let shortcuts = {};
 
-            let allSlots = ['f1_lw','f1_c','f1_rw','f2_lw','f2_c','f2_rw','f3_lw','f3_c','f3_rw',
-                            'd1_ld','d1_rd','d2_ld','d2_rd',
-                            '4v4_f1','4v4_f2','4v4_d1','4v4_d2',
-                            'pp1_lw','pp1_c','pp1_rw','pp1_ld','pp1_rd',
-                            'pp2_lw','pp2_c','pp2_rw','pp2_ld','pp2_rd',
-                            'pk1_f1','pk1_f2','pk1_d1','pk1_d2',
-                            'pk2_f1','pk2_f2','pk2_d1','pk2_d2',
-                            'pk3_f','pk3_d1','pk3_d2'];
+let missingSlots = [];
+allSlots.forEach(slot => {
+let el = document.getElementById(`line_${slot}`);
+if (el) {
+if (!el.value) {
+missingSlots.push(slot);
+} else {
+lines[slot] = el.value;
+}
+}
+});
 
-            // STRICT VALIDATION: Check if any slot is empty
-            let missingSlots = [];
-            allSlots.forEach(slot => {
-                let el = document.getElementById(`line_${slot}`);
-                if (el) {
-                    if (!el.value) {
-                        missingSlots.push(slot);
-                    } else {
-                        lines[slot] = el.value;
-                    }
-                }
-            });
+if (missingSlots.length > 0) {
+alert('⚠️ Incomplete Lineup: You must assign a player to every single position slot before proceeding to the live tracker!');
+return;
+}
 
-            if (missingSlots.length > 0) {
-                alert('⚠️ Incomplete Lineup: You must assign a player to every single position slot before proceeding to the live tracker!');
-                return;
-            }
+let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2','PK3','4v4'];
+allLineKeys.forEach(lKey => {
+let el = document.getElementById(`key_${lKey}`);
+if (el) shortcuts[lKey] = el.value.toUpperCase().trim();
+});
 
-            let allLineKeys = ['f1','f2','f3','d1','d2','PP1','PP2','PK1','PK2','PK3','4v4'];
-            allLineKeys.forEach(lKey => {
-                let el = document.getElementById(`key_${lKey}`);
-                if (el) shortcuts[lKey] = el.value.toUpperCase().trim();
-            });
+matchSetup.roster = roster;
+matchSetup.lines = lines;
+matchSetup.lineShortcuts = shortcuts;
 
-            matchSetup.roster = roster;
-            matchSetup.lines = lines;
-            matchSetup.lineShortcuts = shortcuts;
+localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
+window.location.href = 'game.html';
+};
 
-            localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetup));
-            window.location.href = 'game.html';
-        };
-
-        window.onload = initPage;
-    }
+window.onload = initPage;
+}
 </script>
 
 </body>
 </html>
-                            <div><label>D2</label
