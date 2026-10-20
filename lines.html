@@ -119,7 +119,6 @@
         matchSetup = JSON.parse(localStorage.getItem('hockeyMatchSetup')) || {};
         roster = matchSetup.roster || [];
         
-        // If roster is missing in matchSetup, check master roster saved from index.html
         if (roster.length === 0) {
             let master = JSON.parse(localStorage.getItem('hockeyMasterRoster')) || [];
             if (master.length > 0) {
