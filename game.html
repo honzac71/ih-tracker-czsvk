@@ -348,7 +348,6 @@
     let isClockRunning = false;
     let currentPeriod = 1;
     let manualGoalieOut = false;
-    let penaltyTimerInterval = null;
 
     document.getElementById('displayHome').innerText = matchSetup.homeTeam || 'Home';
     document.getElementById('displayAway').innerText = matchSetup.awayTeam || 'Away';
@@ -377,7 +376,6 @@
     function toggleClock() {
         if (isClockRunning) {
             clearInterval(clockInterval);
-            if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
             isClockRunning = false;
             document.getElementById('clockStatus').innerText = "[STOPPED]";
             document.getElementById('clockStatus').style.color = "#ef4444";
@@ -392,18 +390,15 @@
                 if (clockSeconds > 0) {
                     clockSeconds--;
                     updateClockDisplay();
-                    tickActivePenalties();
+                    tickActivePenalties(); // Single source of truth for penalty ticking
                     accumulateTOI();
                 } else {
                     clearInterval(clockInterval);
-                    if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
                     isClockRunning = false;
                     document.getElementById('clockStatus').innerText = "[PERIOD END]";
                     handlePeriodEnd();
                 }
             }, 1000);
-
-            startPenaltyTimerIntervalIfNeeded();
         }
     }
 
@@ -415,15 +410,6 @@
         }
         updateClockDisplay();
         logEvent(`Clock rewound by +${seconds} seconds.`);
-    }
-
-    function startPenaltyTimerIntervalIfNeeded() {
-        let hasActivePenalty = roster.some(p => statsTracker[p.id] && statsTracker[p.id].penaltySeconds > 0) || opponentPenaltySeconds > 0;
-        if (hasActivePenalty && !penaltyTimerInterval) {
-            penaltyTimerInterval = setInterval(() => {
-                tickActivePenalties();
-            }, 1000);
-        }
     }
 
     function tickActivePenalties() {
@@ -451,16 +437,10 @@
             }
         }
 
-        if (!activePenaltiesExist) {
-            if (penaltyTimerInterval) {
-                clearInterval(penaltyTimerInterval);
-                penaltyTimerInterval = null;
-            }
-            if (currentSituation === 'PK') {
-                currentSituation = 'EV';
-                updateSituationBadge();
-                logEvent("All penalties expired. Situation returned to Even Strength (EV).");
-            }
+        if (!activePenaltiesExist && currentSituation === 'PK') {
+            currentSituation = 'EV';
+            updateSituationBadge();
+            logEvent("All penalties expired. Situation returned to Even Strength (EV).");
         }
 
         renderRosterTable();
@@ -485,8 +465,6 @@
 
     function handlePeriodEnd() {
         logEvent(`Period ${currentPeriod} ended.`);
-        if (penaltyTimerInterval) clearInterval(penaltyTimerInterval);
-        penaltyTimerInterval = null;
         opponentPenaltySeconds = 0;
 
         if (currentPeriod === 1) {
@@ -617,12 +595,6 @@
         currentSituation = 'PP';
         updateSituationBadge();
         updatePenaltyBoxBoard();
-        
-        if (!penaltyTimerInterval && isClockRunning) {
-            penaltyTimerInterval = setInterval(() => {
-                tickActivePenalties();
-            }, 1000);
-        }
         logEvent("Opponent Penalty recorded. Sent to penalty box (Green Box). Situation switched to PP.");
     }
 
@@ -1119,12 +1091,6 @@
             updateSituationBadge();
             updateGraphicalRink();
 
-            if (!penaltyTimerInterval && isClockRunning) {
-                penaltyTimerInterval = setInterval(() => {
-                    tickActivePenalties();
-                }, 1000);
-            }
-
             let rosterList = getCurrentOnIceNumbersList();
             logEvent(`PENALTY (2 min) assigned to ${player.surname} (#${cleanNum}). Sent to box. Auto-switched to PK (PK1 deployed).`, rosterList);
         }
@@ -1171,10 +1137,6 @@
         if (currentSituation === 'PP') {
             logEvent(`Opponent scored during our Power Play -> PP continues.`);
         } else if (currentSituation === 'PK') {
-            if (penaltyTimerInterval) {
-                clearInterval(penaltyTimerInterval);
-                penaltyTimerInterval = null;
-            }
             currentSituation = 'EV';
             updateSituationBadge();
             logEvent(`Opponent scored during Penalty Kill -> PK ends, teams return to EV.`);
