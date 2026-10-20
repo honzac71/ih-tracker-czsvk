@@ -201,7 +201,16 @@
 
     function handleRosterResponse(result) {
         if (result && result.status === 'success' && result.players) {
-            masterRoster = result.players;
+            // Normalize properties so firstName maps from sheet's 'name' column
+            masterRoster = result.players.map(p => ({
+                id: p.id,
+                firstName: p.name || p.firstName || '',
+                surname: p.surname || '',
+                nickname: p.nickname || '',
+                jersey: p.jersey || p.number || '',
+                position: p.position || '',
+                current: p.current || ''
+            }));
             localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
             renderGameRoster();
         } else {
@@ -231,18 +240,12 @@
 
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
-            let jerseyNum = p.jersey || '';
-            let name = p.name || '';
-            let surname = p.surname || '';
-            let nickname = p.nickname || '';
-            let position = p.position || '';
-
             tbody.innerHTML += `<tr>
                 <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
-                <td><strong>#${jerseyNum}</strong></td>
-                <td>${name} ${surname}</td>
-                <td><span style="color: #38bdf8;">${nickname}</span></td>
-                <td>${position}</td>
+                <td><strong>#${p.jersey}</strong></td>
+                <td>${p.firstName} ${p.surname}</td>
+                <td><span style="color: #38bdf8;">${p.nickname}</span></td>
+                <td>${p.position}</td>
             </tr>`;
         });
 
@@ -292,13 +295,8 @@
             let playerObj = masterRoster.find(p => String(p.id) === String(playerId));
             if (playerObj) {
                 activeRoster.push({
-                    id: playerObj.id,
+                    ...playerObj,
                     number: playerObj.jersey,
-                    firstName: playerObj.name,
-                    surname: playerObj.surname,
-                    nickname: playerObj.nickname,
-                    position: playerObj.position,
-                    current: playerObj.current,
                     hotkey: hotkeyPool[idx % hotkeyPool.length]
                 });
             }
