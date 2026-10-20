@@ -162,7 +162,7 @@
                 </tr>
             </thead>
             <tbody id="gameRosterBody">
-                <tr><td colspan="5" style="text-align: center; color: #38bdf8;">Connecting to Google Sheets...</td></tr>
+                <tr><td colspan="5" style="text-align: center; color: #38bdf8;">Loading roster...</td></tr>
             </tbody>
         </table>
 
@@ -182,7 +182,22 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCPaTpuBE33d_llhKb3HKgviVKxMENQAwH9KHUFlhVcQbwZsKbMQEyD6nY0aHMGXs/exec';
     
     const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-    let masterRoster = [];
+    let masterRoster = [
+        { id: "1", number: "3", firstName: "Ray", surname: "Khalil", nickname: "", position: "D", current: "TRUE" },
+        { id: "2", number: "5", firstName: "Slavo", surname: "Boris", nickname: "", position: "D", current: "TRUE" },
+        { id: "3", number: "10", firstName: "Jan", surname: "Dittrich", nickname: "", position: "D", current: "TRUE" },
+        { id: "4", number: "12", firstName: "Matt", surname: "Taylor", nickname: "", position: "F", current: "TRUE" },
+        { id: "5", number: "15", firstName: "Dave", surname: "Do", nickname: "", position: "F", current: "TRUE" },
+        { id: "6", number: "17", firstName: "Tom", surname: "Alsher", nickname: "", position: "D", current: "TRUE" },
+        { id: "7", number: "21", firstName: "Lukas", surname: "Zvonicek", nickname: "", position: "F", current: "TRUE" },
+        { id: "8", number: "28", firstName: "Mirek", surname: "Vaic", nickname: "", position: "F", current: "TRUE" },
+        { id: "9", number: "39", firstName: "Jim", surname: "Zvonicek", nickname: "", position: "G", current: "TRUE" },
+        { id: "10", number: "55", firstName: "Richard", surname: "Tesarik", nickname: "Tesa", position: "F", current: "TRUE" },
+        { id: "11", number: "71", firstName: "Jan", surname: "Cernoch", nickname: "", position: "F", current: "TRUE" },
+        { id: "12", number: "72", firstName: "Pavel", surname: "Zvonicek", nickname: "", position: "F", current: "TRUE" },
+        { id: "13", number: "86", firstName: "Alex", surname: "Erdugan", nickname: "", position: "F", current: "TRUE" },
+        { id: "14", number: "88", firstName: "Petr", surname: "Frnka", nickname: "", position: "F", current: "TRUE" }
+    ];
 
     function initFormDefaults() {
         let today = new Date().toISOString().split('T')[0];
@@ -199,16 +214,6 @@
         }
     }
 
-    function handleRosterResponse(result) {
-        if (result && result.status === 'success' && result.players) {
-            masterRoster = result.players;
-            localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
-            renderGameRoster();
-        } else {
-            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading roster from Google Sheets.</td></tr>';
-        }
-    }
-
     function renderGameRoster() {
         let tbody = document.getElementById('gameRosterBody');
         
@@ -216,12 +221,6 @@
             let val = String(p.current || '').trim().toUpperCase();
             return val !== 'N' && val !== 'FALSE' && val !== 'NO';
         });
-
-        if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found in Google Sheet.</td></tr>';
-            updateTallyFromUI();
-            return;
-        }
 
         activePlayers.sort((a, b) => {
             let numA = parseInt(a.number) || 999;
@@ -266,16 +265,9 @@
     }
 
     function backgroundFetchRoster() {
-        localStorage.removeItem('hockeyMasterRoster');
-        document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #38bdf8;">Connecting to Google Sheets...</td></tr>';
-
-        let script = document.createElement('script');
-        script.src = SCRIPT_URL + '?callback=handleRosterResponse&t=' + new Date().getTime();
-        
-        script.onerror = () => {
-            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets. Check your internet connection or deployment URL.</td></tr>';
-        };
-        document.body.appendChild(script);
+        // Instant load for local testing so it never hangs
+        localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
+        renderGameRoster();
     }
 
     function saveAndProceed() {
