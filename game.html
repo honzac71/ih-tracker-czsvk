@@ -268,7 +268,7 @@
                 <div>
                     <table>
                         <thead>
-                            <tr><th>Key</th><th>#</th><th>Player</th><th>Stats (Skater / GK)</th></tr>
+                            <tr><th>Key</th><th>#</th><th>Player</th><th>Stats (Skater / GK)</th><th>TOI</th><th>+/-</th></tr>
                         </thead>
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
@@ -653,15 +653,17 @@
             // Insert visual dividing line before goalies
             if (isGK && !goalieInserted && skaters.length > 0) {
                 goalieInserted = true;
-                tbody.innerHTML += `<tr><td colspan="4" style="border-top: 2px solid #38bdf8; padding: 2px;"></td></tr>`;
+                tbody.innerHTML += `<tr><td colspan="6" style="border-top: 2px solid #38bdf8; padding: 2px;"></td></tr>`;
             }
 
-            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, penaltySeconds: 0 };
+            let st = statsTracker[p.id] || { goals: 0, assists: 0, shots: 0, pim: 0, plusMinus: 0, toiSeconds: 0, penaltySeconds: 0 };
             let isOnIce = currentOnIce.includes(String(p.id)) ? 'color: #10b981; font-weight:bold;' : '';
             let cleanNum = String(p.number || '').replace('#', '').trim();
+            let toiFormatted = formatTOI(st.toiSeconds);
             let surnameOnly = p.surname || '';
 
             let statsDisplay = "";
+            let pmDisplay = "";
 
             if (isGK) {
                 let sg = st.sg || 0;
@@ -669,7 +671,11 @@
                 let saves = Math.max(0, sg - ga);
                 let savePctDecimal = sg > 0 ? Number((saves / sg).toFixed(3)) : 0;
                 statsDisplay = `SG:${sg} / GA:${ga} / Sv:${saves} (${(savePctDecimal * 100).toFixed(1)}%)`;
+                pmDisplay = `-`;
             } else {
+                let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
+                let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
+                pmDisplay = `<span style="${pmColor} font-weight: bold;">${pmFormatted}</span>`;
                 statsDisplay = `${st.goals}/${st.assists}/${st.shots}/${st.pim}`;
             }
 
@@ -686,6 +692,8 @@
                 <td>${cleanNum}</td>
                 <td>${surnameOnly}${penaltyDisplay}</td>
                 <td>${statsDisplay}</td>
+                <td>${toiFormatted}</td>
+                <td>${pmDisplay}</td>
             </tr>`;
         });
     }
