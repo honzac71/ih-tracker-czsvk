@@ -143,7 +143,7 @@
     <!-- Match Roster Selection Card -->
     <div class="card">
         <h2>Select Today's Playing Roster</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded live from Google Sheets (Sorted by Jersey #).</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Loaded locally for testing (Sorted by Jersey #).</p>
         
         <!-- Testing Auto-Select Option -->
         <div style="background: #0f172a; border: 1px solid #0284c7; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
@@ -182,10 +182,7 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCPaTpuBE33d_llhKb3HKgviVKxMENQAwH9KHUFlhVcQbwZsKbMQEyD6nY0aHMGXs/exec';
     
     const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
-    let masterRoster = [];
-
-    // Fallback default testing roster
-    const fallbackRoster = [
+    let masterRoster = [
         { id: "1", number: "3", firstName: "Ray", surname: "Khalil", nickname: "", position: "D", current: "TRUE" },
         { id: "2", number: "5", firstName: "Slavo", surname: "Boris", nickname: "", position: "D", current: "TRUE" },
         { id: "3", number: "10", firstName: "Jan", surname: "Dittrich", nickname: "", position: "D", current: "TRUE" },
@@ -217,22 +214,6 @@
         }
     }
 
-    function handleRosterResponse(result) {
-        if (result && result.status === 'success' && result.players && result.players.length > 0) {
-            masterRoster = result.players;
-            localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
-            renderGameRoster();
-        } else {
-            useFallbackRoster();
-        }
-    }
-
-    function useFallbackRoster() {
-        masterRoster = fallbackRoster;
-        localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
-        renderGameRoster();
-    }
-
     function renderGameRoster() {
         let tbody = document.getElementById('gameRosterBody');
         
@@ -240,12 +221,6 @@
             let val = String(p.current || '').trim().toUpperCase();
             return val !== 'N' && val !== 'FALSE' && val !== 'NO';
         });
-
-        if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found.</td></tr>';
-            updateTallyFromUI();
-            return;
-        }
 
         activePlayers.sort((a, b) => {
             let numA = parseInt(a.number) || 999;
@@ -287,33 +262,6 @@
         document.getElementById('tallyD').innerText = tally.D;
         document.getElementById('tallyG').innerText = tally.G;
         document.getElementById('tallyTotal').innerText = tally.Total;
-    }
-
-    function backgroundFetchRoster() {
-        // If loaded locally via file://, skip live network fetch instantly to prevent hanging
-        if (window.location.protocol === 'file:') {
-            useFallbackRoster();
-            return;
-        }
-
-        let timeoutTriggered = false;
-        let timer = setTimeout(() => {
-            if (!masterRoster.length) {
-                timeoutTriggered = true;
-                useFallbackRoster();
-            }
-        }, 2000);
-
-        let script = document.createElement('script');
-        script.src = SCRIPT_URL + '?callback=handleRosterResponse&t=' + new Date().getTime();
-        
-        script.onerror = () => {
-            if (!timeoutTriggered) {
-                clearTimeout(timer);
-                useFallbackRoster();
-            }
-        };
-        document.body.appendChild(script);
     }
 
     function saveAndProceed() {
@@ -404,7 +352,8 @@
 
     window.onload = () => {
         initFormDefaults();
-        backgroundFetchRoster();
+        localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
+        renderGameRoster();
     };
 </script>
 
