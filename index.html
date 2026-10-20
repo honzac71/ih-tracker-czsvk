@@ -184,23 +184,6 @@
     const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
     let masterRoster = [];
 
-    const fallbackRoster = [
-        { id: "1", number: "3", name: "Ray", surname: "Khalil", nickname: "Ruda", position: "D", current: "Y" },
-        { id: "2", number: "5", name: "Slavo", surname: "Boris", nickname: "", position: "D", current: "Y" },
-        { id: "3", number: "10", name: "Patrik", surname: "Dittrich", nickname: "", position: "D", current: "Y" },
-        { id: "4", number: "12", name: "Beau", surname: "Taylor", nickname: "Bohdan", position: "F", current: "Y" },
-        { id: "5", number: "15", name: "Tom", surname: "Do", nickname: "Tonda", position: "F", current: "Y" },
-        { id: "6", number: "17", name: "Michal", surname: "Alsher", nickname: "", position: "D", current: "Y" },
-        { id: "7", number: "21", name: "Jim", surname: "Zvonicek", nickname: "", position: "F", current: "Y" },
-        { id: "8", number: "28", name: "Lukas", surname: "Vaic", nickname: "", position: "F", current: "Y" },
-        { id: "9", number: "39", name: "David", surname: "Rehak", nickname: "", position: "G", current: "Y" },
-        { id: "10", number: "55", name: "Richard", surname: "Tesarik", nickname: "", position: "F", current: "Y" },
-        { id: "11", number: "71", name: "Jan", surname: "Cernoch", nickname: "", position: "F", current: "Y" },
-        { id: "12", number: "72", name: "Luke", surname: "Zvonicek", nickname: "", position: "F", current: "Y" },
-        { id: "13", number: "86", name: "Joakim", surname: "Erdugan", nickname: "Jachym", position: "F", current: "Y" },
-        { id: "14", number: "88", name: "Josef", surname: "Frnka", nickname: "", position: "F", current: "Y" }
-    ];
-
     function initFormDefaults() {
         let today = new Date().toISOString().split('T')[0];
         document.getElementById('matchDate').value = today;
@@ -222,18 +205,8 @@
             localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
             renderGameRoster();
         } else {
-            useFallbackRoster();
+            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading roster from Google Sheets.</td></tr>';
         }
-    }
-
-    function useFallbackRoster() {
-        let cached = localStorage.getItem('hockeyMasterRoster');
-        if (cached) {
-            try { masterRoster = JSON.parse(cached); } catch(e) { masterRoster = fallbackRoster; }
-        } else {
-            masterRoster = fallbackRoster;
-        }
-        renderGameRoster();
     }
 
     function renderGameRoster() {
@@ -245,7 +218,7 @@
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found in Google Sheet.</td></tr>';
             updateTallyFromUI();
             return;
         }
@@ -297,27 +270,14 @@
     }
 
     function backgroundFetchRoster() {
-        if (window.location.protocol === 'file:') {
-            useFallbackRoster();
-            return;
-        }
-
-        let timeoutTriggered = false;
-        let timer = setTimeout(() => {
-            if (!masterRoster.length) {
-                timeoutTriggered = true;
-                useFallbackRoster();
-            }
-        }, 2000);
+        localStorage.removeItem('hockeyMasterRoster');
+        document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #38bdf8;">Connecting to Google Sheets...</td></tr>';
 
         let script = document.createElement('script');
         script.src = SCRIPT_URL + '?callback=handleRosterResponse&t=' + new Date().getTime();
         
         script.onerror = () => {
-            if (!timeoutTriggered) {
-                clearTimeout(timer);
-                useFallbackRoster();
-            }
+            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to connect to Google Sheets. Check your internet connection or deployment URL.</td></tr>';
         };
         document.body.appendChild(script);
     }
