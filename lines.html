@@ -198,20 +198,25 @@ tbody.innerHTML += `<tr>
 }
 
 window.updatePlayerHotkey = function(idx, val) {
-let newKey = val.toUpperCase().trim();
-if (newKey === 'Z') {
-alert("⚠️ Hotkey 'Z' is reserved/omitted and cannot be used.");
-document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
-return;
-}
-// Check duplicate player hotkeys
-let duplicateIndex = roster.findIndex((p, i) => i !== idx && p.hotkey === newKey);
-if (duplicateIndex !== -1) {
-alert(`⚠️ Duplicate Hotkey: '${newKey}' is already assigned to another player!`);
-document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
-return;
-}
-roster[idx].hotkey = newKey;
+    let newKey = val.toUpperCase().trim();
+    
+    // 1. Block 'Z' completely
+    if (newKey === 'Z') {
+        alert("⚠️ Hotkey 'Z' is omitted and cannot be used.");
+        document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
+        return;
+    }
+
+    // 2. Check duplicate player hotkeys
+    let duplicateIndex = roster.findIndex((p, i) => i !== idx && p.hotkey === newKey);
+    if (duplicateIndex !== -1) {
+        let dupPlayer = roster[duplicateIndex];
+        alert(`⚠️ Duplicate Hotkey: '${newKey}' is already assigned to #${dupPlayer.number} ${dupPlayer.surname}! Every player must have a unique hotkey.`);
+        document.getElementById(`p-key-${idx}`).value = roster[idx].hotkey;
+        return;
+    }
+
+    roster[idx].hotkey = newKey;
 };
 
 function createPlayerSelect(slotKey) {
