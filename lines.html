@@ -75,7 +75,7 @@
     <!-- Assigned Roster & Hotkeys Card -->
     <div class="card">
         <h2>Assigned Roster & Unique Hotkeys</h2>
-        <p style="color: #94a3b8; font-size: 0.9rem;">Hotkeys are automatically assigned (excluding 'Z', with zero duplicates) for fast live-game tracking.</p>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Hotkeys automatically assigned (excluding 'Z', zero duplicates).</p>
         
         <table id="assignedRosterTable">
             <thead>
@@ -96,8 +96,9 @@
     <!-- Lineup Configuration / Review Card -->
     <div class="card">
         <h2>Starting Lines Setup</h2>
-        <div id="lineupSummary" style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
-            Loading lineup configuration...
+        <p style="color: #94a3b8; font-size: 0.9rem;">Review or modify starting positions using the dropdowns below.</p>
+        <div id="lineupContainer" class="grid-2" style="margin-top: 15px;">
+            <!-- Dropdowns load here -->
         </div>
     </div>
 
@@ -120,7 +121,7 @@
         renderMatchOverview();
         assignUniqueHotkeys();
         renderAssignedRoster();
-        renderLineupSummary();
+        renderLineupDropdowns();
     };
 
     function renderMatchOverview() {
@@ -134,11 +135,9 @@
         if (!matchSetupData.roster) return;
 
         matchSetupData.roster.forEach((player, index) => {
-            // Assign unique hotkey from pool (A through Y, skipping Z completely)
             player.hotkey = hotkeyPool[index % hotkeyPool.length];
         });
 
-        // Save back to local storage with assigned hotkeys
         localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetupData));
     }
 
@@ -161,23 +160,38 @@
         });
     }
 
-    function renderLineupSummary() {
-        let container = document.getElementById('lineupSummary');
+    function renderLineupDropdowns() {
+        let container = document.getElementById('lineupContainer');
         let lines = matchSetupData.lines;
         
         if (!lines || Object.keys(lines).length === 0) {
-            container.innerHTML = '<p style="color: #94a3b8;">Manual lineup configuration mode active.</p>';
+            container.innerHTML = '<p style="color: #94a3b8;">No lines generated.</p>';
             return;
         }
 
-        let html = '<ul style="margin: 0; padding-left: 20px;">';
-        for (let [slot, playerId] of Object.entries(lines)) {
-            let player = matchSetupData.roster.find(p => String(p.id) === String(playerId));
-            let playerName = player ? `${player.firstName} ${player.surname} (#${player.number})` : 'Unknown Player';
-            html += `<li><strong>${slot.toUpperCase()}:</strong> ${playerName}</li>`;
+        let html = '';
+        for (let [slot, selectedPlayerId] of Object.entries(lines)) {
+            let optionsHtml = '';
+            matchSetupData.roster.forEach(p => {
+                let selected = String(p.id) === String(selectedPlayerId) ? 'selected' : '';
+                optionsHtml += `<option value="${p.id}" ${selected}>#${p.number} - ${p.firstName} ${p.surname} (${p.position})</option>`;
+            });
+
+            html += `<div style="margin-bottom: 12px;">
+                <label style="font-size: 0.85rem; color: #38bdf8; text-transform: uppercase; font-weight: bold;">${slot.replace('_', ' - ')}</label>
+                <select onchange="updateLineSlot('${slot}', this.value)">
+                    ${optionsHtml}
+                </select>
+            </div>`;
         }
-        html += '</ul>';
         container.innerHTML = html;
+    }
+
+    function updateLineSlot(slot, newPlayerId) {
+        if (matchSetupData && matchSetupData.lines) {
+            matchSetupData.lines[slot] = newPlayerId;
+            localStorage.setItem('hockeyMatchSetup', JSON.stringify(matchSetupData));
+        }
     }
 
     function confirmAndSyncToSheets() {
@@ -186,7 +200,6 @@
             return;
         }
 
-        // Prepare payload to sync hotkeys back to Column H and log initial match record
         let payload = {
             homeTeam: matchSetupData.homeTeam,
             awayTeam: matchSetupData.awayTeam,
@@ -219,8 +232,6 @@
             body: JSON.stringify(payload)
         }).then(() => {
             alert('Lineups confirmed and hotkeys synced successfully to Google Sheets!');
-            // Proceed to live game tracker if ready
-            // window.location.href = 'tracker.html';
         }).catch(err => {
             alert('Error syncing to Google Sheets: ' + err.message);
         });
