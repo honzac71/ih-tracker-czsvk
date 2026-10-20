@@ -184,6 +184,24 @@
     const hotkeyPool = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
     let masterRoster = [];
 
+    // Fallback default roster for testing if Google Sheets takes too long
+    const fallbackRoster = [
+        { id: "1", number: "3", firstName: "Ray", surname: "Khalil", nickname: "", position: "D", current: "TRUE" },
+        { id: "2", number: "5", firstName: "Slavo", surname: "Boris", nickname: "", position: "D", current: "TRUE" },
+        { id: "3", number: "10", firstName: "Jan", surname: "Dittrich", nickname: "", position: "D", current: "TRUE" },
+        { id: "4", number: "12", firstName: "Matt", surname: "Taylor", nickname: "", position: "F", current: "TRUE" },
+        { id: "5", number: "15", firstName: "Dave", surname: "Do", nickname: "", position: "F", current: "TRUE" },
+        { id: "6", number: "17", firstName: "Tom", surname: "Alsher", nickname: "", position: "D", current: "TRUE" },
+        { id: "7", number: "21", firstName: "Lukas", surname: "Zvonicek", nickname: "", position: "F", current: "TRUE" },
+        { id: "8", number: "28", firstName: "Mirek", surname: "Vaic", nickname: "", position: "F", current: "TRUE" },
+        { id: "9", number: "39", firstName: "Jim", surname: "Zvonicek", nickname: "", position: "G", current: "TRUE" },
+        { id: "10", number: "55", firstName: "Richard", surname: "Tesarik", nickname: "Tesa", position: "F", current: "TRUE" },
+        { id: "11", number: "71", firstName: "Jan", surname: "Cernoch", nickname: "", position: "F", current: "TRUE" },
+        { id: "12", number: "72", firstName: "Pavel", surname: "Zvonicek", nickname: "", position: "F", current: "TRUE" },
+        { id: "13", number: "86", firstName: "Alex", surname: "Erdugan", nickname: "", position: "F", current: "TRUE" },
+        { id: "14", number: "88", firstName: "Petr", surname: "Frnka", nickname: "", position: "F", current: "TRUE" }
+    ];
+
     function initFormDefaults() {
         let today = new Date().toISOString().split('T')[0];
         document.getElementById('matchDate').value = today;
@@ -200,13 +218,19 @@
     }
 
     function handleRosterResponse(result) {
-        if (result && result.status === 'success' && result.players) {
+        if (result && result.status === 'success' && result.players && result.players.length > 0) {
             masterRoster = result.players;
             localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
             renderGameRoster();
         } else {
-            document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading roster from Google Sheets.</td></tr>';
+            useFallbackRoster();
         }
+    }
+
+    function useFallbackRoster() {
+        masterRoster = fallbackRoster;
+        localStorage.setItem('hockeyMasterRoster', JSON.stringify(masterRoster));
+        renderGameRoster();
     }
 
     function renderGameRoster() {
@@ -232,4 +256,38 @@
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
             tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input
+                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
+                <td><strong>#${p.number}</strong></td>
+                <td>${p.firstName} ${p.surname}</td>
+                <td><span style="color: #38bdf8;">${p.nickname || ''}</span></td>
+                <td>${p.position}</td>
+            </tr>`;
+        });
+
+        updateTallyFromUI();
+    }
+
+    function updateTallyFromUI() {
+        let checkedBoxes = document.querySelectorAll('.player-checkbox:checked');
+        let tally = { F: 0, D: 0, G: 0, Total: 0 };
+
+        checkedBoxes.forEach(cb => {
+            let playerId = cb.getAttribute('data-id');
+            let p = masterRoster.find(item => String(item.id) === String(playerId));
+            if (p) {
+                let pos = String(p.position || '').trim().toUpperCase();
+                if (pos.includes('F')) tally.F++;
+                else if (pos.includes('D')) tally.D++;
+                else if (pos.includes('G')) tally.G++;
+                tally.Total++;
+            }
+        });
+
+        document.getElementById('tallyF').innerText = tally.F;
+        document.getElementById('tallyD').innerText = tally.D;
+        document.getElementById('tallyG').innerText = tally.G;
+        document.getElementById('tallyTotal').innerText = tally.Total;
+    }
+
+    function backgroundFetchRoster() {
+        // Set a 3-second timeout failsafe to fallback if
