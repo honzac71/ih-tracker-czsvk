@@ -145,7 +145,6 @@
         <h2>Select Today's Playing Roster</h2>
         <p style="color: #94a3b8; font-size: 0.9rem;">Loaded live from Google Sheets (Sorted by Jersey #).</p>
         
-        <!-- Testing Auto-Select Option -->
         <div style="background: #0f172a; border: 1px solid #0284c7; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
             <input type="checkbox" id="autoSelectLines">
             <label for="autoSelectLines" style="color: #38bdf8; font-weight: bold; margin: 0; cursor: pointer;">⚡ Auto-Select Lineup Randomly (Testing Mode)</label>
@@ -214,31 +213,29 @@
         
         let activePlayers = masterRoster.filter(p => {
             let val = String(p.current || '').trim().toUpperCase();
-            return val === 'Y' || val === 'YES' || val === 'TRUE';
+            return val === 'Y' || val === 'YES' || val === 'TRUE' || val === '1';
         });
 
         if (activePlayers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No active players found in Google Sheet.</td></tr>';
-            updateTallyFromUI();
-            return;
+            activePlayers = masterRoster; // Fallback if 'current' column filters out everything
         }
 
         activePlayers.sort((a, b) => {
-            let numA = parseInt(a.jersey) || 999;
-            let numB = parseInt(b.jersey) || 999;
+            let numA = parseInt(a.number) || 999;
+            let numB = parseInt(b.number) || 999;
             return numA - numB;
         });
 
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
-            let jerseyNum = p.jersey !== undefined && p.jersey !== null ? p.jersey : '';
-            let firstName = p.name !== undefined && p.name !== null ? p.name : '';
+            let jerseyNum = p.number !== undefined && p.number !== null ? p.number : '';
+            let firstName = p.firstName !== undefined && p.firstName !== null ? p.firstName : '';
             let surname = p.surname !== undefined && p.surname !== null ? p.surname : '';
             let nickname = p.nickname !== undefined && p.nickname !== null ? p.nickname : '';
             let position = p.position !== undefined && p.position !== null ? p.position : '';
 
             tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.ID}" checked onchange="updateTallyFromUI()"></td>
+                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.id}" checked onchange="updateTallyFromUI()"></td>
                 <td><strong>#${jerseyNum}</strong></td>
                 <td>${firstName} ${surname}</td>
                 <td><span style="color: #38bdf8;">${nickname}</span></td>
@@ -255,7 +252,7 @@
 
         checkedBoxes.forEach(cb => {
             let playerId = cb.getAttribute('data-id');
-            let p = masterRoster.find(item => String(item.ID) === String(playerId));
+            let p = masterRoster.find(item => String(item.id) === String(playerId));
             if (p) {
                 let pos = String(p.position || '').trim().toUpperCase();
                 if (pos.includes('F')) tally.F++;
@@ -290,12 +287,12 @@
 
         selectedCheckboxes.forEach((cb, idx) => {
             let playerId = cb.getAttribute('data-id');
-            let playerObj = masterRoster.find(p => String(p.ID) === String(playerId));
+            let playerObj = masterRoster.find(p => String(p.id) === String(playerId));
             if (playerObj) {
                 activeRoster.push({
-                    id: playerObj.ID,
-                    number: playerObj.jersey,
-                    firstName: playerObj.name,
+                    id: playerObj.id,
+                    number: playerObj.number,
+                    firstName: playerObj.firstName,
                     surname: playerObj.surname,
                     nickname: playerObj.nickname,
                     position: playerObj.position,
