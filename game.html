@@ -186,4 +186,62 @@
         }
         .event-item { margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 4px; }
         .hotkey-ref-box {
-            font-size: 0.8rem
+            font-size: 0.8rem;
+            color: #94a3b8;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            line-height: 1.3;
+        }
+        .hotkey-ref-box span { color: #38bdf8; font-weight: bold; }
+        .btn-danger { background-color: #ef4444; color: white; border: none; padding: 12px; font-size: 1rem; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-danger:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Live Game Tracker</h1>
+
+    <!-- Scoreboard & Switch Board Header -->
+    <div class="card">
+        <div class="scoreboard">
+            <div class="team-box">
+                <span id="displayHome">Home</span> 
+                <span class="score-num" id="homeScore">0</span>
+                <div class="shot-subtext">Shots: <span id="homeShotsTotal">0</span></div>
+            </div>
+            <div>
+                <span id="displayPeriod" class="badge">PERIOD 1</span> 
+                <span id="gameClock" style="margin-left: 10px; font-family: monospace; color: #38bdf8;">17:00</span>
+                <span id="clockStatus" style="font-size: 0.75rem; margin-left: 5px; color: #ef4444;">[STOPPED]</span>
+                <div class="game-situation-container">
+                    <span id="gameSituation" class="game-situation-badge">EV</span>
+                    <span id="penaltyTimerDisplay" class="penalty-timer" style="display: none;">2:00</span>
+                </div>
+            </div>
+            <div class="team-box">
+                <span id="displayAway">Away</span> 
+                <span class="away-score-num" id="awayScore">0</span>
+                <div class="shot-subtext">Shots: <span id="awayShotsTotal">0</span></div>
+            </div>
+        </div>
+
+        <!-- Switch Board Control Panel -->
+        <div class="switch-board">
+            <button class="btn-switch btn-switch-goal" onclick="recordAwayGoal()">Opponent Goal</button>
+            <button class="btn-switch btn-switch-penalty" onclick="recordOpponentPenalty()">Opponent Penalty</button>
+            <button class="btn-switch btn-switch-rewind" onclick="rewindClock(5)">Rewind Time -5s</button>
+            <button class="btn-switch btn-switch-rewind" onclick="rewindClock(10)">Rewind Time -10s</button>
+        </div>
+    </div>
+
+    <div class="grid-dashboard">
+        <!-- Left Column: Graphical Rink, Penalty Box & Feed -->
+        <div>
+            <div class="card">
+                <h2>Currently On Ice (Graphical Rink)</h2>
+                <div class="rink-container">
+                    <div style="font-size: 0.8rem; color: #38bdf8; margin-bottom: 5px; font-weight: bold;">ATTACK ZONE ➔</div>
+                    <div class="rink-row" id="rinkForwards">
