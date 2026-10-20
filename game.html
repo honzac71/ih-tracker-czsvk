@@ -238,7 +238,7 @@
     </div>
 
     <div class="grid-dashboard">
-        <!-- Left Column: Graphical Rink, Penalty Box & Feed -->
+        <!-- Left Column: Graphical Rink, Penalty Box, Event Feed & Controls Reference -->
         <div>
             <div class="card">
                 <h2>Currently On Ice (Graphical Rink)</h2>
@@ -259,9 +259,15 @@
                     <div class="event-item">[17:00] Tracker initialized. Press Space Bar to start clock.</div>
                 </div>
             </div>
+
+            <div class="card">
+                <h2>Controls & Line Rosters</h2>
+                <div class="hotkey-ref-box" id="controlsReferenceBox"></div>
+                <button class="btn-danger" onclick="endGameAndSync()">End Match & Sync Stats to Google Sheets</button>
+            </div>
         </div>
 
-        <!-- Right Column: Active Roster (Top) & Controls Reference (Bottom) -->
+        <!-- Right Column: Active Roster Only -->
         <div>
             <div class="card">
                 <h2>Active Roster</h2>
@@ -273,12 +279,6 @@
                         <tbody id="rosterHotkeyBody"></tbody>
                     </table>
                 </div>
-            </div>
-
-            <div class="card">
-                <h2>Controls & Line Rosters</h2>
-                <div class="hotkey-ref-box" id="controlsReferenceBox"></div>
-                <button class="btn-danger" onclick="endGameAndSync()">End Match & Sync Stats to Google Sheets</button>
             </div>
         </div>
     </div>
@@ -664,6 +664,7 @@
 
             let statsDisplay = "";
             let pmDisplay = "";
+            let toiDisplay = "";
 
             if (isGK) {
                 let sg = st.sg || 0;
@@ -672,11 +673,13 @@
                 let savePctDecimal = sg > 0 ? Number((saves / sg).toFixed(3)) : 0;
                 statsDisplay = `SG:${sg} / GA:${ga} / Sv:${saves} (${(savePctDecimal * 100).toFixed(1)}%)`;
                 pmDisplay = `-`;
+                toiDisplay = `-`;
             } else {
                 let pmFormatted = st.plusMinus > 0 ? `+${st.plusMinus}` : `${st.plusMinus}`;
                 let pmColor = st.plusMinus > 0 ? 'color: #10b981;' : (st.plusMinus < 0 ? 'color: #ef4444;' : '');
                 pmDisplay = `<span style="${pmColor} font-weight: bold;">${pmFormatted}</span>`;
                 statsDisplay = `${st.goals}/${st.assists}/${st.shots}/${st.pim}`;
+                toiDisplay = toiFormatted;
             }
 
             let penaltyDisplay = "";
@@ -692,7 +695,7 @@
                 <td>${cleanNum}</td>
                 <td>${surnameOnly}${penaltyDisplay}</td>
                 <td>${statsDisplay}</td>
-                <td>${toiFormatted}</td>
+                <td>${toiDisplay}</td>
                 <td>${pmDisplay}</td>
             </tr>`;
         });
