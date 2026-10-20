@@ -214,7 +214,7 @@
         
         let activePlayers = masterRoster.filter(p => {
             let val = String(p.current || '').trim().toUpperCase();
-            return val !== 'N' && val !== 'FALSE' && val !== 'NO';
+            return val === 'Y' || val === 'YES' || val === 'TRUE';
         });
 
         if (activePlayers.length === 0) {
@@ -231,7 +231,6 @@
 
         tbody.innerHTML = '';
         activePlayers.forEach(p => {
-            let pId = p.ID !== undefined ? p.ID : p.id;
             let jerseyNum = p.jersey !== undefined && p.jersey !== null ? p.jersey : '';
             let firstName = p.name !== undefined && p.name !== null ? p.name : '';
             let surname = p.surname !== undefined && p.surname !== null ? p.surname : '';
@@ -239,7 +238,7 @@
             let position = p.position !== undefined && p.position !== null ? p.position : '';
 
             tbody.innerHTML += `<tr>
-                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${pId}" checked onchange="updateTallyFromUI()"></td>
+                <td style="text-align: center;"><input type="checkbox" class="player-checkbox" data-id="${p.ID}" checked onchange="updateTallyFromUI()"></td>
                 <td><strong>#${jerseyNum}</strong></td>
                 <td>${firstName} ${surname}</td>
                 <td><span style="color: #38bdf8;">${nickname}</span></td>
@@ -256,7 +255,7 @@
 
         checkedBoxes.forEach(cb => {
             let playerId = cb.getAttribute('data-id');
-            let p = masterRoster.find(item => String(item.ID !== undefined ? item.ID : item.id) === String(playerId));
+            let p = masterRoster.find(item => String(item.ID) === String(playerId));
             if (p) {
                 let pos = String(p.position || '').trim().toUpperCase();
                 if (pos.includes('F')) tally.F++;
@@ -273,6 +272,7 @@
     }
 
     function backgroundFetchRoster() {
+        localStorage.removeItem('hockeyMasterRoster');
         document.getElementById('gameRosterBody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: #38bdf8;">Connecting to Google Sheets...</td></tr>';
 
         let script = document.createElement('script');
@@ -290,10 +290,10 @@
 
         selectedCheckboxes.forEach((cb, idx) => {
             let playerId = cb.getAttribute('data-id');
-            let playerObj = masterRoster.find(p => String(p.ID !== undefined ? p.ID : p.id) === String(playerId));
+            let playerObj = masterRoster.find(p => String(p.ID) === String(playerId));
             if (playerObj) {
                 activeRoster.push({
-                    id: playerObj.ID !== undefined ? playerObj.ID : playerObj.id,
+                    id: playerObj.ID,
                     number: playerObj.jersey,
                     firstName: playerObj.name,
                     surname: playerObj.surname,
